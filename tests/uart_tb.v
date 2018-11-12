@@ -8,6 +8,8 @@
 
 module test;
 
+  localparam FREQ = 9;
+
   /* Make a regular pulsing clock. */
   reg clk = 0;
   always #1 clk = !clk;
@@ -51,7 +53,7 @@ module test;
      # 2
      cs = 0;
      we = 0;
-     # 100
+     # (100 + (FREQ-4)*16)
      dbw = 8'd255;
      cs  = 1;
      we  = 1;
@@ -70,12 +72,12 @@ module test;
      # 2
      `check(dbr[7], 1);
      cs = 0;
-     # 20
+     # (FREQ * 30 - 100)
      cs = 1;
      # 2
      `check(dbr[7], 0);
      cs = 0;
-     # 140
+     # (140 + (FREQ-4)*30)
      dbw = 8'd0;
      cs  = 1;
      we  = 1;
@@ -88,7 +90,7 @@ module test;
 
   wire tx, rx;
   uart #(
-      .CLK_HZ(460800)
+      .CLK_HZ(115200 * FREQ)
   ) uart1 (
       .dbr(dbr),
       .dbw(dbw),
