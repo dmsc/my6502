@@ -21,10 +21,12 @@ test: $(TESTS:%=$(BUILDDIR)/%.vcd)
 $(TARGET): %: $(BUILDDIR)/%.bin $(BUILDDIR)/%.time
 
 $(BUILDDIR)/%.blif: rtl/%.v | $(BUILDDIR)
-	yosys -p 'synth_ice40 -blif $@' $<
+	yosys -q -p 'synth_ice40 -blif $@' -l $(@:.blif=-yosys.log) $< \
+	    && sed -n -e '/^2.*statistics/,/^2/p' $(@:.blif=-yosys.log)
 
 $(BUILDDIR)/%.json: rtl/%.v | $(BUILDDIR)
-	yosys -p 'synth_ice40 -json $@' $<
+	yosys -q -p 'synth_ice40 -json $@' -l $(@:.json=-yosys.log) $< \
+	    && sed -n -e '/^2.*statistics/,/^2/p' $(@:.json=-yosys.log)
 
 # Place using ARACHNE-PNR
 $(BUILDDIR)/%.asc: $(BUILDDIR)/%.blif  rtl/%.pcf
