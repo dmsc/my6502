@@ -10,6 +10,7 @@ BUILDDIR=build
 # Sources:
 TESTS=\
       uart \
+      timer \
 
 
 all: $(TARGET)
