@@ -58,7 +58,7 @@ module timer(
                     dbr = counter[15:8];
                 else
                 begin
-                    dbr = {shot,6'bx,active};
+                    dbr = {shot,6'b0,active};
                 end
             end
 

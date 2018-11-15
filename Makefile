@@ -12,6 +12,13 @@ TESTS=\
       uart \
       timer \
 
+RTL=\
+    rtl/ALU.v\
+    rtl/cpu.v\
+    rtl/minirom.v\
+    rtl/system.v\
+    rtl/timer.v\
+    rtl/uart.v\
 
 all: $(TARGET)
 
@@ -20,6 +27,14 @@ test: $(TESTS:%=$(BUILDDIR)/%.vcd)
 
 .PHONY: $(TARGET)
 $(TARGET): %: $(BUILDDIR)/%.bin $(BUILDDIR)/%.time
+
+$(BUILDDIR)/$(TARGET).blif: $(RTL) | $(BUILDDIR)
+	yosys -q -p 'synth_ice40 -top system -blif $@' -l $(@:.blif=-yosys.log) $^ \
+	    && sed -n -e '/^[2-9].*statistics/,/^[2-9]/p' $(@:.blif=-yosys.log)
+
+$(BUILDDIR)/$(TARGET).json: $(RTL) | $(BUILDDIR)
+	yosys -q -p 'synth_ice40 -top system -json $@' -l $(@:.json=-yosys.log) $^ \
+	    && sed -n -e '/^[2-9].*statistics/,/^[2-9]/p' $(@:.json=-yosys.log)
 
 $(BUILDDIR)/%.blif: rtl/%.v | $(BUILDDIR)
 	yosys -q -p 'synth_ice40 -blif $@' -l $(@:.blif=-yosys.log) $< \

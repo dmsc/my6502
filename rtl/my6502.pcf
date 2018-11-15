@@ -1,0 +1,6 @@
+
+set_io clk 31
+set_io rst 13
+
+set_io uart_rx   12
+set_io uart_tx   21
