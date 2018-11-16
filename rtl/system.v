@@ -55,9 +55,15 @@ module system(
     wire [7:0] uart1_dbr;
     wire [7:0] rom1_dbr;
 
+    /* This synthesizes to more gates:
     assign dbr = timer1_cs ? timer1_dbr :
                  uart1_cs  ? uart1_dbr :
-                 rom1_cs   ? rom1_dbr : 8'bx;
+                 rom1_cs   ? rom1_dbr : 8'hFF;
+    */
+
+    assign dbr = (timer1_cs ? timer1_dbr : 8'hFF) &
+                 (uart1_cs  ? uart1_dbr : 8'hFF) &
+                 (rom1_cs   ? rom1_dbr : 8'hFF) ;
 
     timer timer1(
         .dbr(timer1_dbr),
@@ -69,7 +75,7 @@ module system(
     );
 
     uart #(
-        .CLK_HZ(345600)
+        .CLK_HZ(115200*9)
     ) uart1 (
         .dbr(uart1_dbr),
         .dbw(dbw),

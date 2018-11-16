@@ -21,7 +21,7 @@ module test;
      rst = 1;
      # 9
      rst = 0;
-     # 12000 $finish;
+     # 30000 $finish;
   end
 
   system sys1(

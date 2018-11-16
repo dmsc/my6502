@@ -18,9 +18,9 @@ reset:
         sta     TIMERC
 
 again:
-        lda     #<1500
+        lda     #<5000
         sta     TIMERL
-        lda     #>1500
+        lda     #>5000
         sta     TIMERH
         sec
         rol     TIMERC
