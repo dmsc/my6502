@@ -1,10 +1,4 @@
 
-`include "rtl/cpu.v"
-`include "rtl/ALU.v"
-`include "rtl/timer.v"
-`include "rtl/uart.v"
-`include "rtl/minirom.v"
-
 module test;
 
   /* Make a regular pulsing clock. */

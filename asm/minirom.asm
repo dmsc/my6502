@@ -22,8 +22,8 @@ again:
         sta     TIMERL
         lda     #>1500
         sta     TIMERH
-        lda     #1
-        sta     TIMERC
+        sec
+        rol     TIMERC
 
         ldx     #0
 

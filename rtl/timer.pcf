@@ -1,0 +1,30 @@
+
+set_io clk 31
+
+# set_io rx   12
+# set_io tx   21
+
+set_io cs   13
+set_io we   18
+set_io rst  11
+set_io dbr[0] 28
+set_io dbr[1] 27
+set_io dbr[2] 26
+set_io dbr[3] 25
+set_io dbr[4] 23
+set_io dbr[5] 20
+set_io dbr[6] 14
+set_io dbr[7] 15
+set_io addr[0]  16
+set_io addr[1]  12
+
+set_io dbw[0] 10
+set_io dbw[1] 9
+set_io dbw[2] 6
+set_io dbw[3] 4
+set_io dbw[4] 3
+set_io dbw[5] 2
+set_io dbw[6] 17
+set_io dbw[7] 19
+
+

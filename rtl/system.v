@@ -29,26 +29,25 @@ module system(
         .PC_MONITOR(monitor)
     );
 
-    reg timer1_cs, uart1_cs, rom1_cs, we_cs;
-    reg [15:0] addr_c;
+    wire timer1_s, uart1_s, rom1_s;
+    assign timer1_s = (addr[15:5] == 11'b11111110000); // $FE00 - $FE0F
+    assign uart1_s  = (addr[15:5] == 11'b11111110001); // $FE20 - $FE2F
+    assign rom1_s   = (addr[15:8] ==  8'hFF);          // $FF00 - $FFFF
 
+    reg timer1_cs, uart1_cs, rom1_cs;
     always @(posedge clk or posedge rst)
     begin
         if (rst)
         begin
-            addr_c    <= 0;
             timer1_cs <= 0;
             uart1_cs  <= 0;
             rom1_cs   <= 0;
-            we_cs     <= 0;
         end
         else
         begin
-            addr_c    <= addr;
-            timer1_cs <= (addr[15:5] == 11'b11111110000); // $FE00 - $FE0F
-            uart1_cs  <= (addr[15:5] == 11'b11111110001); // $FE20 - $FE2F
-            rom1_cs   <= (addr[15:8] ==  8'hFF);   // $FF00 - $FFFF
-            we_cs     <= we;
+            timer1_cs <= timer1_s;
+            uart1_cs  <= uart1_s;
+            rom1_cs   <= rom1_s;
         end
     end
 
@@ -63,11 +62,10 @@ module system(
     timer timer1(
         .dbr(timer1_dbr),
         .dbw(dbw),
-        .addr(addr_c[1:0]),
-        .cs(timer1_cs),
-        .we(we_cs),
+        .addr(addr[1:0]),
+        .we(we & timer1_s),
         .rst(rst),
-        .clk(~clk)
+        .clk(clk)
     );
 
     uart #(
@@ -75,20 +73,18 @@ module system(
     ) uart1 (
         .dbr(uart1_dbr),
         .dbw(dbw),
-        .addr(addr_c[0:0]),
-        .cs(uart1_cs),
-        .we(we_cs),
+        .addr(addr[0:0]),
+        .we(we & uart1_s),
         .rst(rst),
-        .clk(~clk),
+        .clk(clk),
         .tx(uart_tx),
         .rx(uart_rx)
     );
 
     minirom rom1(
         .dbr(rom1_dbr),
-        .addr(addr_c[7:0]),
-        .cs(rom1_cs),
-        .clk(~clk)
+        .addr(addr[7:0]),
+        .clk(clk)
     );
 
 endmodule
