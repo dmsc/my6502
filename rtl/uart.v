@@ -25,7 +25,6 @@ module uart(
     reg [7:0] tx_crnt; // Current byte being transmitted - copied from tx_next on idle
     reg [3:0] state;   // State: 0 == idle, 10 to 1 = transmitting
     wire tx_active = |state;
-    wire chip_read = !we;
     wire chip_write = we;
 
     // TX baud-rate generator
@@ -53,15 +52,20 @@ module uart(
         else
         begin
             // Process writes to registers
-            dbr = 0;
-            if (chip_write && (addr[0] == 1'b0))
+            if (chip_write)
             begin
-                // TODO: signal overrun (tx_next[8] == 1)
-                tx_next <= { 1'b1, dbw };
+                if (addr[0] == 1'b0)
+                begin
+                    // TODO: signal overrun (tx_next[8] == 1)
+                    tx_next <= { 1'b1, dbw };
+                end
             end
-            else if (chip_read && (addr == 1'b1))
+            else // chip_read
             begin
-                dbr = { tx_next[8], 7'b0 };
+                if (addr == 1'b1)
+                    dbr <= { tx_next[8], 7'b0 };
+                else
+                    dbr <= 0;
             end
 
             // Main processing
@@ -76,7 +80,7 @@ module uart(
             else if (tx_next[8] == 1)
             begin
                 { tx_crnt, tx } <= { tx_next[7:0] , 1'b0 };// Shift start bit and next byte
-                tx_next[8] = 0;
+                tx_next[8] <= 0;
                 state <= 10;
             end
         end
