@@ -7,6 +7,8 @@ module system(
     input  uart_rx      // RX data bit
     );
 
+    parameter CLK_HZ = 115200*9; //app 1MHz
+
     wire [15:0] addr;
     wire [7:0] dbr;
     wire [7:0] dbw;
@@ -75,7 +77,7 @@ module system(
     );
 
     uart #(
-        .CLK_HZ(115200*9)
+        .CLK_HZ(CLK_HZ)
     ) uart1 (
         .dbr(uart1_dbr),
         .dbw(dbw),
