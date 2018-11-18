@@ -31,11 +31,11 @@ test: $(TESTS:%=$(BUILDDIR)/%.vcd)
 $(TARGET): %: $(BUILDDIR)/%.bin $(BUILDDIR)/%.time
 
 $(BUILDDIR)/%.blif: rtl/%.v | $(BUILDDIR)
-	yosys -q -p 'synth_ice40 -top system -blif $@' -l $(@:.blif=-yosys.log) $(filter %.v, $^) \
+	yosys -q -p 'synth_ice40 -top $* -blif $@' -l $(@:.blif=-yosys.log) $(filter %.v, $^) \
 	    && sed -n -e '/^[2-9].*statistics/,/^[2-9]/p' $(@:.blif=-yosys.log)
 
 $(BUILDDIR)/%.json: rtl/%.v | $(BUILDDIR)
-	yosys -q -p 'synth_ice40 -top system -json $@' -l $(@:.json=-yosys.log) $(filter %.v, $^) \
+	yosys -q -p 'synth_ice40 -top $* -json $@' -l $(@:.json=-yosys.log) $(filter %.v, $^) \
 	    && sed -n -e '/^[2-9].*statistics/,/^[2-9]/p' $(@:.json=-yosys.log)
 
 # Place using ARACHNE-PNR
@@ -62,8 +62,8 @@ $(BUILDDIR)/%_syn.v: $(BUILDDIR)/%.json
 	yosys -o $@ $<
 
 # Post synthesis simulator
-$(BUILDDIR)/%_test: tests/%_post_tb.v $(BUILDDIR)/%_syn.v
-	iverilog -o $@ -D POST_SYNTHESIS $< $(BUILDDIR)/$*_syn.v  \
+$(BUILDDIR)/%_post_test: tests/%_post_tb.v $(BUILDDIR)/%_syn.v
+	iverilog -g2012 -o $@ -D POST_SYNTHESIS $< $(BUILDDIR)/$*_syn.v  \
 	    `yosys-config --datdir/ice40/cells_sim.v`
 
 # Module simulator
@@ -96,15 +96,15 @@ $(BUILDDIR)/system.json: rtl/system.v rtl/cpu.v rtl/ALU.v rtl/timer.v rtl/uart.v
 $(BUILDDIR)/system.blif: rtl/system.v rtl/cpu.v rtl/ALU.v rtl/timer.v rtl/uart.v rtl/minirom.v
 $(BUILDDIR)/system_test: rtl/system.v rtl/cpu.v rtl/ALU.v rtl/timer.v rtl/uart.v rtl/minirom.v
 
-$(BUILDDIR)/my6502.json: rtl/system.v rtl/cpu.v rtl/ALU.v rtl/timer.v rtl/uart.v rtl/minirom.v
-$(BUILDDIR)/my6502.blif: rtl/system.v rtl/cpu.v rtl/ALU.v rtl/timer.v rtl/uart.v rtl/minirom.v
-$(BUILDDIR)/my6502_test: rtl/system.v rtl/cpu.v rtl/ALU.v rtl/timer.v rtl/uart.v rtl/minirom.v
+$(BUILDDIR)/upduino.json: rtl/system.v rtl/cpu.v rtl/ALU.v rtl/timer.v rtl/uart.v rtl/minirom.v
+$(BUILDDIR)/upduino.blif: rtl/system.v rtl/cpu.v rtl/ALU.v rtl/timer.v rtl/uart.v rtl/minirom.v
+$(BUILDDIR)/upduino_test: rtl/system.v rtl/cpu.v rtl/ALU.v rtl/timer.v rtl/uart.v rtl/minirom.v
 
 $(BUILDDIR)/system_test: $(HEXFILE)
-$(BUILDDIR)/my6502_test: $(HEXFILE)
 $(BUILDDIR)/system.blif: $(HEXFILE)
 $(BUILDDIR)/system.json: $(HEXFILE)
-$(BUILDDIR)/my6502.blif: $(HEXFILE)
-$(BUILDDIR)/my6502.json: $(HEXFILE)
+$(BUILDDIR)/upduino_test: $(HEXFILE)
+$(BUILDDIR)/upduino.blif: $(HEXFILE)
+$(BUILDDIR)/upduino.json: $(HEXFILE)
 
 
