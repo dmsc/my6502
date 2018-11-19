@@ -7,55 +7,76 @@ TIMERL = $FE00
 TIMERH = $FE01
 TIMERC = $FE02
 
+charout .macro
+wait    bit     UARTS
+        bmi     wait
+        sta     UARTD
+        .endm
+
         org     $FF00
 
 reset:
         cld
         sei
 
-        // Print a message via serial port, repeated via a timer
-        lda     #0
-        sta     TIMERC
-
-again:
-        lda     #<60000
-        sta     TIMERL
-        lda     #>60000
-        sta     TIMERH
-        sec
-        rol     TIMERC
-
-        ldx     #0
-
+        // Print welcome message via serial port
 msg_loop:
         lda     message, x
-//        jsr     charout
-
-charout1:
-        bit     UARTS
-        bmi     charout1
-        sta     UARTD
-
+        charout
         inx
         cpx     #msg_len
         bne     msg_loop
 
-        // Now, use the timer to wait 10000 counts
+        // Reset timer
+        ldy     #0
+        sty     TIMERC
+
+        // Wait for characters from serial port, print "." once each second
+second:
+        lda     #'.'
+        charout
+        tya
+        iny
+        and     #$0F
+        clc
+        adc     #$41
+        charout
+        lda     #$0D
+        charout
+        lda     #$0A
+        charout
+
+        ldx     #250    // One second is 250 * 24000 cycles
+
+        // Init timer to 24000
+t24000:
+        lda     #<24000
+        sta     TIMERL
+        lda     #>24000
+        sta     TIMERH
+        lda     #1
+        sta     TIMERC
+
+        // Check if we need to keep waiting
+        dex
+        beq     second
+
+        // Wait for timer or uart receive
 wait:
         lda     TIMERC
-        bpl     wait
-        jmp     again
+        bmi     t24000
+        bit     UARTS
+        bvc     wait
+
+        // Write te character through the serial port
+        sta     UARTS
+        lda     UARTD
+        charout
+        jmp     wait
 
 message:
         .byte   'Hello from my 6502!', 13, 10
 msg_len = * - message
-
-charout:
-        bit     UARTS
-        bmi     charout
-        sta     UARTD
-        rts
-
 
 nmi:
 irq:
