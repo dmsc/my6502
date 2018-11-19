@@ -8,13 +8,13 @@
 
 module test;
 
-  localparam FREQ = 9;
+  localparam FREQ = 14;
 
   /* Make a regular pulsing clock. */
   reg clk = 0;
   always #1 clk = !clk;
 
-  reg cs, we, addr, rst;
+  reg cs, we, addr, rst, rx;
   reg [7:0] dbw;
   wire [7:0] dbr;
 
@@ -65,12 +65,12 @@ module test;
      addr = 1;
      cs = 1;
      # 2
-     `check(dbr[7], 1);
+     `check(dbr[7], 0);
      cs = 0;
      # 20
      cs = 1;
      # 2
-     `check(dbr[7], 1);
+     `check(dbr[7], 0);
      cs = 0;
      # (FREQ * 30 - 100)
      cs = 1;
@@ -85,18 +85,44 @@ module test;
      # 2
      cs = 0;
      we = 0;
-     # 400 $finish;
+     # 8000 $finish;
   end
 
-  wire tx, rx;
+  initial begin
+      rx = 1;
+      #123
+                 rx = 0; // S
+      # (FREQ*2) rx = 1; // 7
+      # (FREQ*2) rx = 0;
+      # (FREQ*2) rx = 1;
+      # (FREQ*2) rx = 0; // 4
+      # (FREQ*2) rx = 1;
+      # (FREQ*2) rx = 0;
+      # (FREQ*2) rx = 1; // 1
+      # (FREQ*2) rx = 0; // 0
+      # (FREQ*2) rx = 1; // T
+
+      #221
+                 rx = 0; // S
+      # (FREQ*2) rx = 1; // 7
+      # (FREQ*2) rx = 0;
+      # (FREQ*2) rx = 0;
+      # (FREQ*2) rx = 0; // 4
+      # (FREQ*2) rx = 0;
+      # (FREQ*2) rx = 0;
+      # (FREQ*2) rx = 0; // 1
+      # (FREQ*2) rx = 1; // 0
+      # (FREQ*2) rx = 1; // T
+  end
+
+  wire tx;
   uart #(
       .CLK_HZ(115200 * FREQ)
   ) uart1 (
       .dbr(dbr),
       .dbw(dbw),
       .addr(addr),
-      .cs(cs),
-      .we(we),
+      .we(we & cs),
       .rst(rst),
       .clk(clk),
       .tx(tx),
