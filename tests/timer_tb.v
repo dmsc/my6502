@@ -11,9 +11,7 @@
     dbw = value; \
     addr = xaddr; \
     we  = 1; \
-    cs  = 1; \
     # 2 \
-    cs = 0; \
     we = 0; \
     dbw = 0;
 
@@ -21,10 +19,8 @@
     @(negedge clk); \
     addr = xaddr; \
     we  = 0; \
-    cs  = 1; \
     # 2 \
     `check(dbr, value); \
-    cs = 0; \
     we = 0; \
 
 module test;
@@ -33,7 +29,7 @@ module test;
   reg clk = 0;
   always #1 clk = !clk;
 
-  reg cs, we, rst;
+  reg we, rst;
   reg [1:0] addr;
   reg [7:0] dbw;
   wire [7:0] dbr;
@@ -48,7 +44,6 @@ module test;
      $dumpfile(vcd_file);
      $dumpvars(0,test);
      rst = 0;
-     cs = 0;
      we = 0;
      dbw = 8'b0;
      addr = 0;
@@ -64,33 +59,41 @@ module test;
      `write(   3, 1 );
      `write(   1, 2 );  // enable timer
      # 1400
-     `read_chk(8'b0xxxxxx1, 2);
-     # 594
-     `read_chk(8'b0xxxxxx1, 2);
+     `read_chk(8'b1, 2);
+     # 596
+     `read_chk(8'b1, 2);
      # 2
-     `read_chk(8'b1xxxxxx1, 2);
+     `read_chk(8'b10000001, 2);
      # 78
-     `write( 100, 0 );  // Set limit == 100
+     `write(  98, 0 );  // Set limit == 100
      `write(   0, 1 );
      `write(   1, 2 );
      # 110
-     `read_chk(8'b0xxxxxx1, 2);
+     `read_chk(8'b00000001, 2);
      # 2
-     `read_chk(8'b1xxxxxx1, 2);
-     # 400 $finish;
+     `read_chk(8'b10000001, 2);
+     # 100
+     `write(   0, 2 );
+     `write( 100, 0 );  // Set limit == 100
+     `write(   0, 0 );
+     `write(   1, 2 );
+     # 200
+     `read_chk(8'b00000001, 2);
+     # 2
+     `read_chk(8'b10000001, 2);
+     # 10 $finish;
   end
 
   timer timer1 (
       .dbr(dbr),
       .dbw(dbw),
       .addr(addr),
-      .cs(cs),
       .we(we),
       .rst(rst),
       .clk(clk)
   );
 
   initial
-     $monitor("At time %5d, [%h %h %b %b] A:%b S:%b", $time, dbr, dbw, cs, we, timer1.active, timer1.shot);
+     $monitor("At time %5d, [%h %h %b] A:%b S:%b", $time, dbr, dbw, we, timer1.active, timer1.shot);
 
 endmodule // test

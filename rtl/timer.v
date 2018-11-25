@@ -15,7 +15,6 @@ module timer(
     reg shot;           // Timer reached count (reset on timer write)
     wire chip_read = !we;
     wire chip_write = we;
-    wire nonzero = |counter;
 
     // main process
     always @(posedge clk or posedge rst)
@@ -28,37 +27,42 @@ module timer(
         end
         else
         begin
+            // Process timer
+            if (active)
+            begin
+                counter <= counter - 1;
+                if (counter == 0)
+                    shot <= 1;
+            end
+
             // Process writes to registers
             if (chip_write)
             begin
+                // NOTE: writing to the counter here will inhibit the
+                //       decrementing above, so we loose two cycles for
+                //       each full write.
                 if (addr == 0)
-                    counter = counter + dbw;
+                    counter <= counter + dbw;
                 else if (addr == 1)
-                    counter[15:8] = counter[15:8] + dbw;
+                    counter <= counter + (dbw * 256); // NOTE: "<<8" uses a lot more PLBs???
                 else if (addr == 2)
                 begin
-                    shot = dbw[7];
-                    active = dbw[0];
+                    shot <= dbw[7];
+                    active <= dbw[0];
+                    if (dbw[0] == 0) // Wen timer de-activates, the count is reset to 0
+                        counter <= 0;
                 end
             end
             else if (chip_read)
             begin
                 if (addr == 0)
-                    dbr = counter[7:0];
+                    dbr <= counter[7:0];
                 else if (addr == 1)
-                    dbr = counter[15:8];
+                    dbr <= counter[15:8];
                 else
                 begin
-                    dbr = {shot,6'b0,active};
+                    dbr <= {shot,6'b0,active};
                 end
-            end
-
-            // Process timer
-            if (active)
-            begin
-                counter <= counter - 1;
-                if (!nonzero)
-                    shot <= 1;
             end
         end
     end

@@ -86,9 +86,9 @@ second:
 
         // Init timer to 24000
 t24000:
-        lda     #<24000
+        lda     #<(24000-2)
         sta     TIMERL
-        lda     #>24000
+        lda     #>(24000-2)
         sta     TIMERH
         lda     #1
         sta     TIMERC
