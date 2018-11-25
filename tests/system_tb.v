@@ -22,10 +22,12 @@ module test;
      rst = 1;
      # 9
      rst = 0;
-     # 30000 $finish;
+     # 5000000 $finish;
   end
 
-  system sys1(
+  system #(
+      .CLK_HZ(9*115200)
+  ) sys1 (
       .rst(rst),
       .clk(clk),
       .uart_tx(tx),

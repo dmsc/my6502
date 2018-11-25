@@ -1,5 +1,5 @@
 
-TARGET ?= system
+TARGET ?= upduino
 
 PACKAGE=sg48
 DEVICE=5k
@@ -55,11 +55,11 @@ $(BUILDDIR)/%.time: $(BUILDDIR)/%.asc rtl/%.pcf
 
 # Post-synthesis verilog - from BLIF
 $(BUILDDIR)/%_syn.v: $(BUILDDIR)/%.blif
-	yosys -o $@ $<
+	yosys -o $@ -p 'read_blif -wideports $<'
 
 # Post-synthesis verilog - from JSON
 $(BUILDDIR)/%_syn.v: $(BUILDDIR)/%.json
-	yosys -o $@ $<
+	yosys -o $@ -p 'read_json -wideports $<'
 
 # Post synthesis simulator
 $(BUILDDIR)/%_post_test: tests/%_post_tb.v $(BUILDDIR)/%_syn.v
@@ -68,7 +68,7 @@ $(BUILDDIR)/%_post_test: tests/%_post_tb.v $(BUILDDIR)/%_syn.v
 
 # Module simulator
 $(BUILDDIR)/%_test: tests/%_tb.v rtl/%.v | $(BUILDDIR)
-	iverilog -g2012 -o $@ $(filter %.v , $^)
+	iverilog -g2012 -o $@ $(filter %.v , $^) `yosys-config --datdir/ice40/cells_sim.v`
 
 # Run simulation
 $(BUILDDIR)/%.vcd: $(BUILDDIR)/%_test
@@ -92,13 +92,13 @@ clean:
 .PRECIOUS: $(BUILDDIR)/%.blif $(BUILDDIR)/%.json $(BUILDDIR)/%.asc $(BUILDDIR)/%_syn.v
 
 # Dependencies
-$(BUILDDIR)/system.json: rtl/system.v rtl/cpu.v rtl/ALU.v rtl/timer.v rtl/uart.v rtl/minirom.v
-$(BUILDDIR)/system.blif: rtl/system.v rtl/cpu.v rtl/ALU.v rtl/timer.v rtl/uart.v rtl/minirom.v
-$(BUILDDIR)/system_test: rtl/system.v rtl/cpu.v rtl/ALU.v rtl/timer.v rtl/uart.v rtl/minirom.v
+$(BUILDDIR)/system.json: rtl/system.v rtl/cpu.v rtl/ALU.v rtl/timer.v rtl/uart.v rtl/minirom.v rtl/ram.v
+$(BUILDDIR)/system.blif: rtl/system.v rtl/cpu.v rtl/ALU.v rtl/timer.v rtl/uart.v rtl/minirom.v rtl/ram.v
+$(BUILDDIR)/system_test: rtl/system.v rtl/cpu.v rtl/ALU.v rtl/timer.v rtl/uart.v rtl/minirom.v rtl/ram.v
 
-$(BUILDDIR)/upduino.json: rtl/system.v rtl/cpu.v rtl/ALU.v rtl/timer.v rtl/uart.v rtl/minirom.v
-$(BUILDDIR)/upduino.blif: rtl/system.v rtl/cpu.v rtl/ALU.v rtl/timer.v rtl/uart.v rtl/minirom.v
-$(BUILDDIR)/upduino_test: rtl/system.v rtl/cpu.v rtl/ALU.v rtl/timer.v rtl/uart.v rtl/minirom.v
+$(BUILDDIR)/upduino.json: rtl/system.v rtl/cpu.v rtl/ALU.v rtl/timer.v rtl/uart.v rtl/minirom.v rtl/ram.v
+$(BUILDDIR)/upduino.blif: rtl/system.v rtl/cpu.v rtl/ALU.v rtl/timer.v rtl/uart.v rtl/minirom.v rtl/ram.v
+$(BUILDDIR)/upduino_test: rtl/system.v rtl/cpu.v rtl/ALU.v rtl/timer.v rtl/uart.v rtl/minirom.v rtl/ram.v
 
 $(BUILDDIR)/system_test: $(HEXFILE)
 $(BUILDDIR)/system.blif: $(HEXFILE)
