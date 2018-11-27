@@ -8,14 +8,30 @@ TIMERH = $FE01
 TIMERC = $FE02
 
 ptr     = 0   // Use locations 0,1 as pointer
+tmp     = 2
 
-charout .macro
-wait    bit     UARTS
-        bmi     wait
-        sta     UARTD
-        .endm
 
         org     $FF00
+
+print_hex:
+        pha
+        lsr
+        lsr
+        lsr
+        lsr
+        jsr     hex_digit
+        pla
+        and     #$0F
+hex_digit:
+        sed			; set decimal mode
+	cmp	#$0A		; set carry for +1 if >9
+	adc	#'0'		; add ASCII "0"
+	cld			; clear decimal mode
+put_char:
+        bit     UARTS
+        bmi     put_char
+        sta     UARTD
+        rts
 
 reset:
         cld
@@ -23,29 +39,23 @@ reset:
 
         // Print initial character
         lda     #'+'
-        charout
+        sta     UARTD
+
+        // Init stack pointer
+        ldx     #$FF
+        txs
 
         // Test two bytes of ZP RAM
-        lda     #$55
-        ldx     #$AA
+        lda     #'Z'
         sta     ptr
-        stx     ptr+1
         cmp     ptr
-        bne     bad_zp
-        cpx     ptr+1
-        bne     bad_zp
-        asl     ptr
-        lsr     ptr+1
-        cpx     ptr
-        bne     bad_zp
-        cmp     ptr+1
-        bne     bad_zp
+        bne     put_char
 
         // Now test and fill all memory with 0
+        dex             // $FE = Fill up to $FDFF
         lda     #0
         sta     ptr
         sta     ptr+1
-        ldx     #$FE    // Fill up to $FDFF
         ldy     #ptr+2  // From ptr+2
 
 clrmem
@@ -66,36 +76,86 @@ clrmem
 
 end_ram:
         // Check if we have at least 512 bytes of RAM
-        lda     1
-        lsr
-        beq     bad_ram
+        ldx     ptr+1
+        lda     #'E'
+        cpx     #2
+        bcc     put_char
+        // Print amount of ram
+        txa
+        jsr     print_hex
 
-        // Print welcome message
-        jsr     ok
+        // Prompt and process commands
+prompt:
+        lda     #13
+        jsr     put_char
+        lda     #10
+        jsr     put_char
+        lda     #'>'
+        jsr     put_char
 
-        // Reset timer
+        // Get command address: 2 bytes
+        jsr     get_hex
+        sta     ptr+1
+        jsr     get_hex
+        sta     ptr
+
+        // Get command character
+        jsr     get_char
         ldy     #0
-        sty     TIMERC
+
+        // "R" means "RUN"
+        cmp     #'R'
+        bne     not_run
+        jmp     (ptr)
+
+not_run:
+        // ":" means "ENTER" 16 bytes
+        cmp     #':'
+        bne     not_enter
+
+enter_loop:
+        jsr     get_hex
+        sta     (ptr), y
+        iny
+        cpy     #$10
+        bne     enter_loop
+        beq     prompt
+
+not_enter:
+        // "S" means "SHOW" 16 bytes
+        cmp     #'S'
+        bne     prompt
+
+show_loop:
+        lda     (ptr), y
+        jsr     print_hex
+        iny
+        cpy     #$10
+        bne     show_loop
+        beq     prompt
 
         // Wait for characters from serial port, print "." once each second
-second:
-        ldx     #(msg_dot - messages)
-        jsr     msg_loop
+get_char:
+        ldx     #5              // Timeout: 2.5 seconds is app 250 * 60000 cycles
 
-        ldx     #250    // One second is 250 * 24000 cycles
-
-        // Init timer to 24000
+        // Init timer to 24000-2
 t24000:
-        lda     #<(24000-2)
+        lda     #$E9    // Optimization: use $E9E9 for timer reload, giving $E9EB cycles
         sta     TIMERL
-        lda     #>(24000-2)
         sta     TIMERH
         lda     #1
-        sta     TIMERC
+        sta     TIMERC  // Start timer
 
         // Check if we need to keep waiting
-        dex
-        beq     second
+        inx
+        bne     wait
+
+        // Timeout, stop timer and go to prompt
+        stx     TIMERC
+exit_prompt:
+        pla
+        pla
+        jmp     prompt
 
         // Wait for timer or uart receive
 wait:
@@ -104,50 +164,47 @@ wait:
         bit     UARTS
         bvc     wait
 
-        // Write te character through the serial port
-        sta     UARTS
+        dec     TIMERC  // Stop timer
+        // Ok, we have a character, return it
         lda     UARTD
-        charout
-        jmp     wait
-
-bad_zp:
-        ldx     #(msg_bad_zp - messages)
-        bne     msg_loop
-
-bad_ram:
-        ldx     #(msg_bad_ram - messages)
-        bne     msg_loop
-ok:
-        ldx     #(msg_ok - messages)
-msg_loop:
-        lda     messages, x
-        charout
-        inx
-        cmp     #10
-        bne     msg_loop
+        sta     UARTS
+        cmp     #'!'
+        bcc     get_char
+        jsr     put_char
         rts
 
-print_hex:
+get_hex .proc
 
-messages:
+        jsr     again
+again:
+        jsr     get_char
+        eor     #'0'
+        cmp     #10
+        bcc     digit
+        adc     #$88
+        cmp     #$FA
+        bcc     exit_prompt     ; Not an hex number
+digit:
+        sec
+        rol
+        asl
+        asl
+        asl
+        asl
+rloop:
+        rol     tmp
+        asl
+        bne     rloop
+        lda     tmp
+        rts
 
-msg_ok:
-        .byte   'Welcome to my6502', 13, 10
+        .endp
 
-msg_bad_zp:
-        .byte   'ZP '
-
-msg_bad_ram:
-        .byte 'mem error!', 13, 10
-
-msg_dot:
-        .byte   '.', 13, 10
-
-nmi:
-irq:
-        rti
+nmi = $200
+irq = $203
 
 
+        .echo   "Used: ", * - $FF00 + 6, " bytes, remains: ", $FFFA - *
 
         org     $FFFA
         .word   nmi
