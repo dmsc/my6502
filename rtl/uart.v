@@ -1,5 +1,30 @@
 // A simple UART for an 8 bit bus
 
+// Baud rate generator
+module baud_gen(
+    output sample,      // Active for one clock cycle and then inactive for divisor cycles
+    input  active,      // Only count if active == 1
+    input  clk,         // Clock input
+    input  rst          // Master reset
+    );
+
+    parameter DIVISOR = 5;      // The divisor
+
+    localparam DIV_W = $clog2(DIVISOR+1);       // Counter width
+
+    reg [DIV_W-1:0] count;
+
+    assign sample = (count == DIVISOR);
+    always @(posedge clk or posedge rst)
+    begin
+        if (rst)
+            count <= 0;
+        else
+            count <= (!active | sample) ? 0 : (count+1);
+    end
+
+endmodule
+
 module uart(
     output reg [7:0] dbr,   // Data bus READ
     input  [7:0] dbw,   // Data bus WRITE
@@ -14,48 +39,45 @@ module uart(
     parameter CLK_HZ = 115200*5; // Master clock: 25MHz
     parameter BAUD = 115200;
 
-    localparam RX_DIVISOR = CLK_HZ / (2 * BAUD) - 1;    // Our divisor
-    localparam RX_W = $clog2(RX_DIVISOR+1);             // Clock generator width
-
-    localparam TX_DIVISOR = CLK_HZ / BAUD - 1;  // Our divisor
-    localparam TX_W = $clog2(TX_DIVISOR+1);     // Clock generator width
-
-    // Internal registers
-    reg [8:0] tx_next;  // Next byte to transmit plus stop bit
-    reg [7:0] tx_crnt;  // Current byte being transmitted - copied from tx_next on idle
-    reg [7:0] rx_buf;   // Received byte buffer.
-    reg [7:0] rx_shift; // Byte being shifted into receiver.
-    reg [3:0] tx_state; // TX State: 0 == idle, 10 to 1 = transmitting
-    reg [4:0] rx_state; // RX State: 0 == idle, 10 to 1 = receiving
-    reg rx_ok;
-    wire tx_active = |tx_state;
-    wire rx_active = |rx_state;
     wire chip_write = we;
 
+    // Internal TX registers
+    localparam TX_DIVISOR = CLK_HZ / BAUD - 1;  // Our divisor
+    reg [8:0] tx_next;  // Next byte to transmit plus stop bit
+    reg [7:0] tx_crnt;  // Current byte being transmitted - copied from tx_next on idle
+    reg [3:0] tx_state; // TX State: 0 == idle, 10 to 1 = transmitting
+    wire tx_active = |tx_state;
+    wire tx_bit;
+
+    // Internal RX registers
+    localparam RX_DIVISOR = CLK_HZ / (2 * BAUD) - 1;    // Our divisor
+    reg [7:0] rx_buf;   // Received byte buffer.
+    reg [7:0] rx_shift; // Byte being shifted into receiver.
+    reg [4:0] rx_state; // RX State: 0 == idle, 10 to 1 = receiving
+    reg rx_ok;
+    reg rx_latch;
+    wire rx_active = |rx_state;
+    wire rx_bit;
+
     // TX baud-rate generator
-    reg [TX_W-1:0] tx_count = 0;
-    wire tx_bit = (tx_count == TX_DIVISOR);
-    always @(posedge clk or posedge rst)
-    begin
-        if (rst)
-            tx_count <= 0;
-        else
-            tx_count <= (tx_bit | !tx_active) ? 0 : (tx_count+1);
-    end
+    baud_gen #(
+        .DIVISOR(TX_DIVISOR)
+    ) baud_tx (
+        .sample( tx_bit ),
+        .active( tx_active ),
+        .clk( clk ),
+        .rst( rst )
+    );
 
     // RX baud-rate generator
-    reg [RX_W-1:0] rx_count = 0;
-    wire rx_bit = (rx_count == RX_DIVISOR);
-    wire rx_sample = rx_bit & !rx_state[0];
-    always @(posedge clk or posedge rst)
-    begin
-        if (rst)
-            rx_count <= 0;
-        else
-        begin
-            rx_count <= (rx_active & !rx_bit) ? (rx_count+1) : 0;
-        end
-    end
+    baud_gen #(
+        .DIVISOR(RX_DIVISOR)
+    ) baud_rx (
+        .sample( rx_bit ),
+        .active( rx_active ),
+        .clk( clk ),
+        .rst( rst )
+    );
 
     // UART state machine
     always @(posedge clk or posedge rst)
@@ -71,6 +93,7 @@ module uart(
             rx_shift <= 0;
             rx_buf <= 0;
             rx_ok <= 0;
+            rx_latch <= 1;
         end
         else
         begin
@@ -111,25 +134,34 @@ module uart(
                 tx_state <= 10;
             end
 
+            // Latches RX signal, prevents glitches
+            rx_latch <= rx;
+
             // Main RX processing
             if (!rx_active)
             begin
-                if (!rx)
+                if (!rx_latch)
                 begin
                     rx_shift <= 0;
-                    rx_state <= 20;
+                    rx_state <= 19;
                 end
             end
             else if (rx_bit)
             begin
-                if (!rx_state[0])
-                    rx_shift <= { rx, rx_shift[7:1] };
-                if (rx_state == 2)
+                if (rx_state[0])
                 begin
-                    rx_buf <= rx_shift;
-                    rx_ok  <= 1;
+                    // Shifts new bit
+                    rx_shift <= { rx_latch, rx_shift[7:1] };
+                    // Tests if we are at stop bit
+                    if ( rx_state[4:1] == 0 )
+                    begin
+                        rx_buf <= rx_shift;
+                        rx_ok  <= 1;
+                    end
                 end
-                rx_state <= rx_state - 1;
+
+                rx_state <= rx_state + 31;
+
             end
         end
     end
