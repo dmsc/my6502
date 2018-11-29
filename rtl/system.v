@@ -4,7 +4,10 @@ module system(
     input  clk,         // Main clock
     input  rst,         // reset
     output uart_tx,     // TX data bit
-    input  uart_rx      // RX data bit
+    input  uart_rx,     // RX data bit
+    output led_r,       // LED RED
+    output led_g,       // LED GREEN
+    output led_b        // LED BLUE
     );
 
     parameter CLK_HZ = 115200*9; //app 1MHz
@@ -31,9 +34,10 @@ module system(
         .PC_MONITOR(monitor)
     );
 
-    wire timer1_s, uart1_s, rom1_s, ram1_s;
+    wire timer1_s, uart1_s, rom1_s, ram1_s, rgb1_s;
     assign timer1_s = (addr[15:5] == 11'b11111110000); // $FE00 - $FE0F
     assign uart1_s  = (addr[15:5] == 11'b11111110001); // $FE20 - $FE2F
+    assign rgb1_s   = (addr[15:5] == 11'b11111110010); // $FE40 - $FE4F
     assign rom1_s   = (addr[15:8] ==  8'hFF);          // $FF00 - $FFFF
     assign ram1_s   = ((&(addr[15:9])) ==  0);         // $0000 - $FDFF
 
@@ -106,6 +110,19 @@ module system(
         .addr(addr[15:0]),
         .we(we & ram1_s),
         .clk(clk)
+    );
+
+    wire led_r, led_g, led_b;
+    rgbled rgb1(
+//        .dbr(rgb_dbr),  // No data read. (UNUSED)
+        .dbw(dbw),
+        .addr(addr[3:0]),
+        .we(we & rgb1_s),
+        .rst(rst),
+        .clk(clk),
+        .RGB_R(led_r),
+        .RGB_G(led_g),
+        .RGB_B(led_b)
     );
 
 endmodule

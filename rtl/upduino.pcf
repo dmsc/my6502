@@ -4,3 +4,7 @@ set_io uart_tx   21
 
 set_io clk_1 25
 set_io clk_2 23
+
+set_io led_r 39
+set_io led_g 40
+set_io led_b 41

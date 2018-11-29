@@ -16,6 +16,8 @@ RTL=\
     rtl/ALU.v\
     rtl/cpu.v\
     rtl/minirom.v\
+    rtl/ram.v\
+    rtl/rgbled.v\
     rtl/system.v\
     rtl/timer.v\
     rtl/uart.v\
@@ -92,13 +94,13 @@ clean:
 .PRECIOUS: $(BUILDDIR)/%.blif $(BUILDDIR)/%.json $(BUILDDIR)/%.asc $(BUILDDIR)/%_syn.v
 
 # Dependencies
-$(BUILDDIR)/system.json: rtl/system.v rtl/cpu.v rtl/ALU.v rtl/timer.v rtl/uart.v rtl/minirom.v rtl/ram.v
-$(BUILDDIR)/system.blif: rtl/system.v rtl/cpu.v rtl/ALU.v rtl/timer.v rtl/uart.v rtl/minirom.v rtl/ram.v
-$(BUILDDIR)/system_test: rtl/system.v rtl/cpu.v rtl/ALU.v rtl/timer.v rtl/uart.v rtl/minirom.v rtl/ram.v
+$(BUILDDIR)/system.json: $(RTL)
+$(BUILDDIR)/system.blif: $(RTL)
+$(BUILDDIR)/system_test: $(RTL)
 
-$(BUILDDIR)/upduino.json: rtl/system.v rtl/cpu.v rtl/ALU.v rtl/timer.v rtl/uart.v rtl/minirom.v rtl/ram.v
-$(BUILDDIR)/upduino.blif: rtl/system.v rtl/cpu.v rtl/ALU.v rtl/timer.v rtl/uart.v rtl/minirom.v rtl/ram.v
-$(BUILDDIR)/upduino_test: rtl/system.v rtl/cpu.v rtl/ALU.v rtl/timer.v rtl/uart.v rtl/minirom.v rtl/ram.v
+$(BUILDDIR)/upduino.json: $(RTL)
+$(BUILDDIR)/upduino.blif: $(RTL)
+$(BUILDDIR)/upduino_test: $(RTL)
 
 $(BUILDDIR)/system_test: $(HEXFILE)
 $(BUILDDIR)/system.blif: $(HEXFILE)
@@ -106,5 +108,4 @@ $(BUILDDIR)/system.json: $(HEXFILE)
 $(BUILDDIR)/upduino_test: $(HEXFILE)
 $(BUILDDIR)/upduino.blif: $(HEXFILE)
 $(BUILDDIR)/upduino.json: $(HEXFILE)
-
 

@@ -4,7 +4,10 @@ module upduino(
     input  uart_rx,
     output uart_tx,
     output clk_1,
-    output clk_2
+    output clk_2,
+    output led_r,
+    output led_g,
+    output led_b
     );
 
     wire clk;
@@ -24,7 +27,10 @@ module upduino(
         .clk(clk),
         .rst(reset),
         .uart_tx(uart_tx),
-        .uart_rx(uart_rx)
+        .uart_rx(uart_rx),
+        .led_r(led_r),
+        .led_g(led_g),
+        .led_b(led_b)
     );
 
     reg [3:0] cdiv = 4'b0;
