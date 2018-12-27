@@ -1,16 +1,21 @@
 // Main system - connect data buses
 
 module system(
-    input  clk,         // Main clock
+    input  clk25,       // Main clock: 25.175MHz for VGA to work
     input  rst,         // reset
     output uart_tx,     // TX data bit
     input  uart_rx,     // RX data bit
     output led_r,       // LED RED
     output led_g,       // LED GREEN
-    output led_b        // LED BLUE
+    output led_b,       // LED BLUE
+    output vga_h,       // VGA HSync
+    output vga_v,       // VGA VSync
+    output vga_r,       // VGA RED
+    output vga_g,       // VGA GREEN
+    output vga_b        // VGA BLUE
     );
 
-    parameter CLK_HZ = 115200*9; //app 1MHz
+    parameter CLK_HZ = 115200*18; //app 2MHz
 
     wire [15:0] addr;
     wire [7:0] dbr;
@@ -21,8 +26,16 @@ module system(
     wire rdy = 1;
     wire [15:0] monitor;
 
+    reg cpu_clk = 0;
+
+    // Divide main clock for CPU:
+    always @(posedge clk25)
+    begin
+        cpu_clk <= !cpu_clk;
+    end
+
     cpu mycpu(
-        .clk(clk),
+        .clk(cpu_clk),
         .reset(rst),
         .AB(addr),
         .DI(dbr),
@@ -42,7 +55,7 @@ module system(
     assign ram1_s   = ((&(addr[15:9])) ==  0);         // $0000 - $FDFF
 
     reg timer1_cs, uart1_cs, rom1_cs, ram1_cs;
-    always @(posedge clk or posedge rst)
+    always @(posedge cpu_clk or posedge rst)
     begin
         if (rst)
         begin
@@ -82,18 +95,18 @@ module system(
         .addr(addr[1:0]),
         .we(we & timer1_s),
         .rst(rst),
-        .clk(clk)
+        .clk(cpu_clk)
     );
 
     uart #(
-        .CLK_HZ(CLK_HZ)
+        .CLK_HZ(CLK_HZ/2)
     ) uart1 (
         .dbr(uart1_dbr),
         .dbw(dbw),
         .addr(addr[0:0]),
         .we(we & uart1_s),
         .rst(rst),
-        .clk(clk),
+        .clk(cpu_clk),
         .tx(uart_tx),
         .rx(uart_rx)
     );
@@ -101,15 +114,54 @@ module system(
     minirom rom1(
         .dbr(rom1_dbr),
         .addr(addr[7:0]),
-        .clk(clk)
+        .clk(cpu_clk)
     );
 
+    /*
     ram ram1(
         .dbr(ram1_dbr),
         .dbw(dbw),
         .addr(addr[15:0]),
         .we(we & ram1_s),
-        .clk(clk)
+        .clk(clk25)
+    );
+    */
+
+    // RAM is accessed at double rate, interleaving VGA and CPU
+    wire [12:0] vga_addr;
+    wire [7:0] ram1_dbr_o;
+
+    wire [15:0] ram_addr = (cpu_clk == 0) ? addr : { 3'b110, vga_addr };
+    wire ram_we  = (cpu_clk == 0) ? we & ram1_s : 0;
+
+    reg [7:0] ram1_dbr_l;
+    always @(posedge clk25)
+    begin
+        if (cpu_clk == 1)
+            ram1_dbr_l <= ram1_dbr_o;
+    end
+
+    assign ram1_dbr = (cpu_clk == 0) ? ram1_dbr_l : ram1_dbr_o;
+
+    ram ram1(
+        .dbr(ram1_dbr_o),
+        .dbw(dbw),
+        .addr(ram_addr[15:0]),
+        .we(ram_we),
+        .clk(clk25)
+    );
+
+    vga vga1(
+        .addr_out(vga_addr),
+        .data_in(ram1_dbr_o),
+        .clk(clk25),
+        .cpu_clk(cpu_clk),
+        .rst(rst),
+        .hsync(vga_h),
+        .vsync(vga_v),
+        .red(vga_r),
+        .green(vga_g),
+        .blue(vga_b)
     );
 
     wire led_r, led_g, led_b;
@@ -119,7 +171,7 @@ module system(
         .addr(addr[3:0]),
         .we(we & rgb1_s),
         .rst(rst),
-        .clk(clk),
+        .clk(cpu_clk),
         .RGB_R(led_r),
         .RGB_G(led_g),
         .RGB_B(led_b)

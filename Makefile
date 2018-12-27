@@ -16,11 +16,13 @@ RTL=\
     rtl/ALU.v\
     rtl/cpu.v\
     rtl/minirom.v\
+    rtl/pll.v\
     rtl/ram.v\
     rtl/rgbled.v\
     rtl/system.v\
     rtl/timer.v\
     rtl/uart.v\
+    rtl/vga.v\
 
 HEXFILE=$(BUILDDIR)/minirom.hex
 
@@ -34,19 +36,19 @@ $(TARGET): %: $(BUILDDIR)/%.bin $(BUILDDIR)/%.time
 
 $(BUILDDIR)/%.blif: rtl/%.v | $(BUILDDIR)
 	yosys -q -p 'synth_ice40 -top $* -blif $@' -l $(@:.blif=-yosys.log) $(filter %.v, $^) \
-	    && sed -n -e '/^[2-9].*statistics/,/^[2-9]/p' $(@:.blif=-yosys.log)
+	    && sed -n -e '/^[1-9].*statistics/,/^[1-9]/p' $(@:.blif=-yosys.log)
 
 $(BUILDDIR)/%.json: rtl/%.v | $(BUILDDIR)
 	yosys -q -p 'synth_ice40 -top $* -json $@' -l $(@:.json=-yosys.log) $(filter %.v, $^) \
-	    && sed -n -e '/^[2-9].*statistics/,/^[2-9]/p' $(@:.json=-yosys.log)
+	    && sed -n -e '/^[1-9].*statistics/,/^[1-9]/p' $(@:.json=-yosys.log)
 
 # Place using ARACHNE-PNR
-$(BUILDDIR)/%.asc: $(BUILDDIR)/%.blif  rtl/%.pcf
-	arachne-pnr -d $(DEVICE) -P $(PACKAGE) -p rtl/$*.pcf -o $@ $<
+#$(BUILDDIR)/%.asc: $(BUILDDIR)/%.blif  rtl/%.pcf
+#	arachne-pnr -d $(DEVICE) -P $(PACKAGE) -p rtl/$*.pcf -o $@ $<
 
 # Place using NEXTPNR
-#$(BUILDDIR)/%.asc: $(BUILDDIR)/%.json  rtl/%.pcf
-#	nextpnr-ice40 --$(SPEED)$(DEVICE) --json $< --pcf rtl/$*.pcf --asc $@
+$(BUILDDIR)/%.asc: $(BUILDDIR)/%.json  rtl/%.pcf
+	nextpnr-ice40 --freq 13 --$(SPEED)$(DEVICE) --json $< --pcf rtl/$*.pcf --asc $@
 
 $(BUILDDIR)/%.bin: $(BUILDDIR)/%.asc
 	icepack $< $@

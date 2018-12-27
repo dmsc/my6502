@@ -102,7 +102,8 @@ module test;
       # (FREQ*2) rx = 0; // 0
       # (FREQ*2) rx = 1; // T
 
-      #221
+      # (FREQ*2+3)
+ //     #221
                  rx = 0; // S
       # (FREQ*2) rx = 1; // 7
       # (FREQ*2) rx = 0;

@@ -9,7 +9,7 @@ module rgbled(
     input  clk,         // Clock
     output RGB_R,       // I/O for RED led
     output RGB_G,       // I/O for GREEN led
-    output RGB_B,       // I/O for BLUE led
+    output RGB_B        // I/O for BLUE led
     );
 
     wire pwm_red, pwm_green, pwm_blue;
@@ -31,7 +31,7 @@ module rgbled(
         .LEDDADDR1(addr[1]),
         .LEDDADDR0(addr[0]),
         .LEDDDEN(we),
-        .LEDDEXE(1),            // Always enabled
+        .LEDDEXE(1'b1),         // Always enabled
 //        .LEDDRST(rst),        // Not supported by icestorm!
         .PWMOUT0(pwm_red),
         .PWMOUT1(pwm_green),

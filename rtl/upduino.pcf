@@ -2,9 +2,15 @@
 set_io uart_rx   12
 set_io uart_tx   21
 
-set_io clk_1 25
-set_io clk_2 23
+set_io iclk 2
 
 set_io led_r 39
 set_io led_g 40
 set_io led_b 41
+
+set_io vga_h 28
+set_io vga_v 38
+set_io vga_r 42
+set_io vga_g 36
+set_io vga_b 43
+

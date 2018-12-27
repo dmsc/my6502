@@ -3,47 +3,54 @@
 module upduino(
     input  uart_rx,
     output uart_tx,
-    output clk_1,
-    output clk_2,
     output led_r,
     output led_g,
-    output led_b
+    output led_b,
+    output vga_h,
+    output vga_v,
+    output vga_r,
+    output vga_g,
+    output vga_b,
+    input  iclk
     );
 
-    wire clk;
+    wire clk25;
 
-    // Main clock : 48/8 = 6MHz
-    SB_HFOSC #(
-        .CLKHF_DIV("0b11")
-    ) hfosc (
-        .CLKHFEN(1'b1),
-        .CLKHFPU(1'b1),
-        .CLKHF(clk)
+    // Main clock from PLL
+    pll pll1(
+        .clock_in(iclk),
+        .clock_out(clk25),
+        .locked(lock)
     );
 
     system #(
-        .CLK_HZ(6000000)
+        .CLK_HZ(25175000)
     ) sys1 (
-        .clk(clk),
+        .clk25(clk25),
         .rst(reset),
         .uart_tx(uart_tx),
         .uart_rx(uart_rx),
         .led_r(led_r),
         .led_g(led_g),
-        .led_b(led_b)
+        .led_b(led_b),
+        .vga_h(vga_h),
+        .vga_v(vga_v),
+        .vga_r(vga_r),
+        .vga_g(vga_g),
+        .vga_b(vga_b)
     );
 
     reg [3:0] cdiv = 4'b0;
     reg reset = 1;
-    always @(posedge clk)
+    always @(posedge clk25)
     begin
-        cdiv <= cdiv + 1;
-        if(cdiv == 4'b1111)
-            reset <= 0;
+        if (lock)
+        begin
+            cdiv <= cdiv + 1;
+            if(cdiv == 4'b1111)
+                reset <= 0;
+        end
     end
-
-    assign clk_1 = reset;
-    assign clk_2 = cdiv[3];
 
 endmodule
 
