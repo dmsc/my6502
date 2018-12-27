@@ -15,6 +15,7 @@ module upduino(
     );
 
     wire clk25;
+    wire lock;
 
     // Main clock from PLL
     pll pll1(
