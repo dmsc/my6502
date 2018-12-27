@@ -9,7 +9,7 @@ module vga(
     output red,
     output green,
     output blue,
-    output reg [12:0] addr_out,
+    output [12:0] addr_out,
     input [7:0] data_in
     );
 
@@ -54,10 +54,10 @@ module vga(
     //   FP =   10 lines: 514 -> 523 - Front Porch
     //
     //   Total 524 lines per frame.
-    localparam VSP_CLK =   3;   // Sync pulse end, start of back porch
-    localparam VBP_CLK =  34;   // Back porch end, start of visible area
-    localparam VVA_CLK = 514;   // Visible area end, start of front porch
-    localparam VFP_CLK = 524;   // Front porch end, end of full line.
+    localparam VSP_CLK =   2;     // Sync pulse end, start of back porch
+    localparam VBP_CLK =  35+36;  // Back porch end, start of visible area
+    localparam VVA_CLK = 515-36;  // Visible area end, start of front porch
+    localparam VFP_CLK = 525;     // Front porch end, end of full line.
 
     localparam VC_W = $clog2(VFP_CLK); // Vertical Counter width
     reg [VC_W-1:0] vcount;
@@ -82,11 +82,18 @@ module vga(
     assign green = (vactive && hactive) ? data_g[0] : 0;
     assign blue  = (vactive && hactive) ? data_b[0] : 0;
 
+    // Memory counters:
+    reg [9:0] line_addr; // Address of current line, missing low addresses
+    // Always update read address from line pointers
+    wire [5:0] col_addr = (hcount>>4) - (HBP_CLK>>4) + 1;
+    assign addr_out = (line_addr<<3) + col_addr;
+
     // Active area: output image
     wire vactive = ((vcount >= VBP_CLK) && (vcount < VVA_CLK)) ? 1 : 0;
     wire hactive = ((hcount >= HBP_CLK) && (hcount < HVA_CLK)) ? 1 : 0;
 
     // Output data
+    reg [7:0] mdata_in;
     reg [7:0] data_r;
     reg [7:0] data_g;
     reg [7:0] data_b;
@@ -94,28 +101,35 @@ module vga(
     // Video data
     always @(posedge clk)
     begin
-        if (vactive && hactive)
+        // Copy memory read data to internal register
+        if (cpu_clk == 0)
+            mdata_in <= data_in;
+
+        if (vactive)
         begin
-            if (cpu_clk == 0)
+            // On each line, we read from memory to internal buffer and
+            // then outputs data
+            if (hcount[3:0] == 4'b1111)
             begin
-                if (hcount[3:1] == 3'b111)
-                begin
-                    // Read from memory
-                    data_r <= data_in;
-                    data_g <= data_in;
-                    data_b <= data_in;
-                    addr_out <= addr_out + 1;
-                end
-                else
-                begin
-                    data_r  <= { 1'b0, data_r[7:1] };
-                    data_g  <= { 1'b0, data_g[7:1] };
-                    data_b  <= { 1'b0, data_b[7:1] };
-                end
+                // Read from memory
+                data_r <= mdata_in;
+                data_g <= mdata_in;
+                data_b <= mdata_in;
             end
+            else if (hcount[0] == 1)
+            begin
+                data_r  <= { 1'b0, data_r[7:1] };
+                data_g  <= { 1'b0, data_g[7:1] };
+                data_b  <= { 1'b0, data_b[7:1] };
+            end
+            if (h_end && !vcount[0])
+                line_addr <= line_addr + 5;
         end
-        else if (!vactive)
-            addr_out <= 0;
+        else
+        begin
+            // Reset address on inactive area
+            line_addr <= 0;
+        end
     end
 
 endmodule
