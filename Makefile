@@ -11,6 +11,8 @@ BUILDDIR=build
 TESTS=\
       uart \
       timer \
+      system \
+      upduino_post \
 
 RTL=\
     rtl/ALU.v\
