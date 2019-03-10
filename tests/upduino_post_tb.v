@@ -1,3 +1,16 @@
+/*
+ * Simple 6502 computer for ice40up5k FPGA.
+ *
+ * (C) Daniel Serpell, <daniel.serpell@gmail.com>
+ *
+ * Feel free to use this code in any project (commercial or not), as long as you
+ * keep this message, and the copyright notice. This code is provided "as is",
+ * without any warranties of any kind.
+ *
+ */
+
+// Post synthesis test
+
 `timescale 1us/1ns
 
 module TB_SB_HFOSC(
