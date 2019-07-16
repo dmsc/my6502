@@ -26,6 +26,9 @@ RTL=\
     rtl/uart.v\
     rtl/vga.v\
 
+# Clock constrains for packer:
+SDC_FILE=clk-pre.sdc
+
 HEXFILE=$(BUILDDIR)/minirom.hex
 
 all: $(TARGET)
@@ -50,7 +53,8 @@ $(BUILDDIR)/%.json: rtl/%.v | $(BUILDDIR)
 
 # Place using NEXTPNR
 $(BUILDDIR)/%.asc: $(BUILDDIR)/%.json  rtl/%.pcf
-	nextpnr-ice40 --freq 13 --$(SPEED)$(DEVICE) --json $< --pcf rtl/$*.pcf --asc $@
+	nextpnr-ice40 --pre-pack $(SDC_FILE) \
+	              --$(SPEED)$(DEVICE) --json $< --pcf rtl/$*.pcf --asc $@
 
 $(BUILDDIR)/%.bin: $(BUILDDIR)/%.asc
 	icepack $< $@
