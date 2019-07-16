@@ -28,6 +28,10 @@ module test;
      end
      $dumpfile(vcd_file);
      $dumpvars(0,test);
+     $display("Loading RAM");
+     $readmemh("tests/ram0.mem", sys1.ram1.ram0.mem);
+     $readmemh("tests/ram1.mem", sys1.ram1.ram1.mem);
+     $display("Starting simulation");
      rst = 0;
      # 7
      rst = 1;
