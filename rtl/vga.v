@@ -113,7 +113,7 @@ module vga(
     always @(posedge clk)
     begin
         // Copy memory read data to internal register
-        if (cpu_clk == 0)
+        if (cpu_clk == 1)
             mdata_in <= data_in;
 
         if (vactive)

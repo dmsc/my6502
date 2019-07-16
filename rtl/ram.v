@@ -65,16 +65,21 @@ module ram(
         ramsel <= addr[1:0];
     end
 
+    reg [15:0] data16;
     always @(*)
     begin
-        if (ramsel == 2'b00)
-            dbr <= dataout0[7:0];
-        else if (ramsel == 2'b01)
-            dbr <= dataout0[15:8];
-        else if (ramsel == 2'b10)
-            dbr <= dataout1[7:0];
-        else // if (ramsel == 2'b11)
-            dbr <= dataout1[15:8];
+        if (ramsel[1] == 0)
+            data16 <= dataout0;
+        else
+            data16 <= dataout1;
+    end
+
+    always @(*)
+    begin
+        if (ramsel[0] == 0)
+            dbr <= data16[7:0];
+        else
+            dbr <= data16[15:8];
     end
 
 endmodule

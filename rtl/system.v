@@ -128,31 +128,21 @@ module system(
         .clk(cpu_clk)
     );
 
-    /*
-    ram ram1(
-        .dbr(ram1_dbr),
-        .dbw(dbw),
-        .addr(addr[15:0]),
-        .we(we & ram1_s),
-        .clk(clk25)
-    );
-    */
-
     // RAM is accessed at double rate, interleaving VGA and CPU
     wire [12:0] vga_addr;
     wire [7:0] ram1_dbr_o;
 
-    wire [15:0] ram_addr = (cpu_clk == 0) ? addr : { 3'b110, vga_addr };
-    wire ram_we  = (cpu_clk == 0) ? we & ram1_s : 0;
+    wire [15:0] ram_addr = (cpu_clk == 1) ? addr : { 3'b110, vga_addr };
+    wire ram_we  = (cpu_clk == 1) ? we & ram1_s : 0;
 
     reg [7:0] ram1_dbr_l;
-    always @(posedge clk25)
-    begin
-        if (cpu_clk == 1)
-            ram1_dbr_l <= ram1_dbr_o;
-    end
 
-    assign ram1_dbr = (cpu_clk == 0) ? ram1_dbr_l : ram1_dbr_o;
+    // Latch RAM data to the CPU clock.
+    always @(posedge cpu_clk)
+    begin
+        ram1_dbr_l <= ram1_dbr_o;
+    end
+    assign ram1_dbr = ram1_dbr_l;
 
     ram ram1(
         .dbr(ram1_dbr_o),
