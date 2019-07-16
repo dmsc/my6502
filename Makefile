@@ -64,12 +64,12 @@ $(BUILDDIR)/%.time: $(BUILDDIR)/%.asc rtl/%.pcf
 	icetime -m -t -P $(PACKAGE) -p rtl/$*.pcf -d $(SPEED)$(DEVICE) -r $@ $<
 
 # Post-synthesis verilog - from BLIF
-$(BUILDDIR)/%_syn.v: $(BUILDDIR)/%.blif
-	yosys -o $@ -p 'read_blif -wideports $<'
+#$(BUILDDIR)/%_syn.v: $(BUILDDIR)/%.blif
+#	yosys -o $@ -p 'read_blif -wideports $<'
 
 # Post-synthesis verilog - from JSON
 $(BUILDDIR)/%_syn.v: $(BUILDDIR)/%.json
-	yosys -o $@ -p 'read_json -wideports $<'
+	yosys -o $@ -p 'read_json $<'
 
 # Post synthesis simulator
 $(BUILDDIR)/%_post_test: tests/%_post_tb.v $(BUILDDIR)/%_syn.v
