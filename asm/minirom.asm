@@ -23,18 +23,29 @@ LEDDBR   = $FE49   ; LED Driver Pre-scale Register (W)
 LEDDONR  = $FE4A   ; LED Driver ON Time Register (W)
 LEDDOFR  = $FE4B   ; LED Driver OFF Time Register (W)
 
+; VGA registers
+VGACOLOR = $FE60   ; VGA fore-back colors
+
 ptr     = 0   // Use locations 0,1 as pointer
 tmp     = 2
 
 
         org     $FF00
 
+prompt_msg = *
+        .byte   '?', 10, 13
+
 ;----------------------------------------------------------------------
 ; Reads an HEX number, exits to prompt on error
 get_hex .proc
 
-        jsr     again
-again:
+        jsr     get_low_hex
+        asl
+        asl
+        asl
+        asl
+        sta     tmp
+get_low_hex:
         jsr     get_char
         eor     #'0'
         cmp     #10
@@ -42,59 +53,23 @@ again:
         ora     #$20            ; Lower to upper case
         adc     #$88
         cmp     #$FA
-        bcc     exit_prompt     ; Not an hex number
+        bcc     prompt          ; Not an hex number
 digit:
-        sec
-        rol
-        asl
-        asl
-        asl
-        asl
-rloop:
-        rol     tmp
-        asl
-        bne     rloop
-        lda     tmp
+        and     #$0F
+        ora     tmp
         rts
-
     .endp
-
 
 ;----------------------------------------------------------------------
 ; Reads a character, ignores control chars and spaces, echoes the
 ; character back. Exits to prompt on timeout.
 get_char .proc
 
-        ldx     #5              // Timeout: 2.5 seconds is app 250 * 60000 cycles
-
-        // Init timer to 24000-2
-t24000:
-        stx     LEDDPWRG        // Show LED interaction
-        lda     #$E9    // Optimization: use $E9E9 for timer reload, giving $E9EB cycles
-        sta     TIMERL
-        sta     TIMERH
-        lda     #1
-        sta     TIMERC  // Start timer
-
-        // Check if we need to keep waiting
-        inx
-        bne     wait
-
-        // Timeout, stop timer and go to prompt
-        stx     TIMERC
-.def :exit_prompt
-        pla
-        pla
-        jmp     prompt
-
-        // Wait for timer or uart receive
+        // Wait for uart receive
 wait:
-        lda     TIMERC
-        bmi     t24000
         bit     UARTS
         bvc     wait
 
-        dec     TIMERC  // Stop timer
         // Ok, we have a character, return it
         lda     UARTD
         sta     UARTS
@@ -108,10 +83,7 @@ put_char .proc
         bmi     put_char
         sta     UARTD
         rts
-    .endp       ; PROMPT bellow uses this "RTS" as '`':
-
-prompt_msg = *-1
-        .byte   10, 13
+    .endp
 
 print_hex .proc
         pha
@@ -142,57 +114,44 @@ reset:
         asl     ; Use A = $46 (F) to signal error
         sta     ptr
         cmp     ptr
-        bne     put_char
+        beq     ok_ram1
+        sta     UARTD
+ok_ram1:
 
         asl     ; Use A = $8C to init LED control
         sta     LEDDCR0
 
-        // Now test and fill all memory with 0
-        ldx     #0
-        stx     ptr
-        stx     ptr+1
 
-        // Init stack pointer
-        dex     // X = $FF
-        txs
+        // Now test and fill all memory with 0
+        lda     #0
+        sta     ptr
+        sta     ptr+1
 
         dex     // X = $FE, Fill up to $FDFF
-        ldy     #ptr+2  // From ptr+2
-
+        tay
 clrmem
-        lda     #$55
-        sta     (ptr), y
-        cmp     0
-        beq     end_ram // We changed location 0, so we reached RAM limit
-        eor     (ptr), y
-        bne     end_ram // Or we could not change location, also end of RAM
         sta     (ptr), y
         cmp     (ptr), y
-        bne     end_ram // Also can't change, end of RAM
+        bne     prompt // Can't change, end of RAM
         iny
         bne     clrmem
         inc     ptr+1
         cpx     ptr+1
         bne     clrmem
 
-end_ram:
-        // Check if we have at least 512 bytes of RAM
-        ldx     ptr+1
-        lda     #'E'
-        cpx     #2
-        bcc     put_char
-        // Print amount of ram
-        txa
-        jsr     print_hex
-
         // Prompt and process commands
 prompt:
-        ldx     #2
+        // Init stack pointer
+        ldx     #$FF
+        txs
+        ldy     #3
+
 prompt_loop:
-        lda     prompt_msg,x
+        lda     prompt_msg-1,y
         jsr     put_char
-        dex
-        bpl     prompt_loop
+        dey
+        bne     prompt_loop
+        // Here, Y = 0
 
         // Get command address: 2 bytes
         jsr     get_hex
@@ -202,7 +161,6 @@ prompt_loop:
 
         // Get command character
         jsr     get_char
-        ldy     #0
 
         // ":" means "ENTER" 16 bytes
         cmp     #':'
@@ -233,6 +191,9 @@ not_show:
         // "R" means "RUN" - EOR above menas "R" == 1
         lsr
         bne     prompt
+        jsr     call_prog
+        jmp     prompt
+call_prog:
         jmp     (ptr)
 
 
