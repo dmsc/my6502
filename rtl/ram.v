@@ -13,8 +13,8 @@
 
 module ram(
     output reg [7:0] dbr, // Data bus READ
-    input  [7:0] dbw,   // Data bus READ
-    input  [15:0] addr, // Address bus - eight bits
+    input  [7:0] dbw,   // Data bus WRITE
+    input  [15:0] addr, // Address bus - sixteen bits
     input  we,          // Write/Read
     input  clk          // Clock
     );
