@@ -23,7 +23,8 @@ module system(
     output vga_v,       // VGA VSync
     output vga_r,       // VGA RED
     output vga_g,       // VGA GREEN
-    output vga_b        // VGA BLUE
+    output vga_b,       // VGA BLUE
+    output vga_i        // VGA INTENSITY
     );
 
     parameter CLK_HZ = 115200*18; //app 2MHz
@@ -58,10 +59,11 @@ module system(
         .PC_MONITOR(monitor)
     );
 
-    wire timer1_s, uart1_s, rom1_s, ram1_s, rgb1_s;
-    assign timer1_s = (addr[15:5] == 11'b11111110000); // $FE00 - $FE0F
-    assign uart1_s  = (addr[15:5] == 11'b11111110001); // $FE20 - $FE2F
-    assign rgb1_s   = (addr[15:5] == 11'b11111110010); // $FE40 - $FE4F
+    wire timer1_s, uart1_s, rom1_s, ram1_s, rgb1_s, vga1_s;
+    assign timer1_s = (addr[15:5] == 11'b11111110000); // $FE00 - $FE1F
+    assign uart1_s  = (addr[15:5] == 11'b11111110001); // $FE20 - $FE3F
+    assign rgb1_s   = (addr[15:5] == 11'b11111110010); // $FE40 - $FE5F
+    assign vga1_s   = (addr[15:5] == 11'b11111110011); // $FE60 - $FE7F
     assign rom1_s   = (addr[15:8] ==  8'hFF);          // $FF00 - $FFFF
     assign ram1_s   = ((&(addr[15:9])) ==  0);         // $0000 - $FDFF
 
@@ -74,6 +76,7 @@ module system(
             uart1_cs  <= 0;
             rom1_cs   <= 0;
             ram1_cs   <= 0;
+            ram1_dbr  <= 8'b0;
         end
         else
         begin
@@ -81,13 +84,14 @@ module system(
             uart1_cs  <= uart1_s;
             rom1_cs   <= rom1_s;
             ram1_cs   <= ram1_s;
+            ram1_dbr <= ram1_dbr_o;
         end
     end
 
     wire [7:0] timer1_dbr;
     wire [7:0] uart1_dbr;
     wire [7:0] rom1_dbr;
-    wire [7:0] ram1_dbr;
+    reg  [7:0] ram1_dbr;
 
     /* This synthesizes to more gates:
     assign dbr = timer1_cs ? timer1_dbr :
@@ -135,15 +139,6 @@ module system(
     wire [15:0] ram_addr = (cpu_clk == 1) ? addr : { 3'b110, vga_addr };
     wire ram_we  = (cpu_clk == 1) ? we & ram1_s : 0;
 
-    reg [7:0] ram1_dbr_l;
-
-    // Latch RAM data to the CPU clock.
-    always @(posedge cpu_clk)
-    begin
-        ram1_dbr_l <= ram1_dbr_o;
-    end
-    assign ram1_dbr = ram1_dbr_l;
-
     ram ram1(
         .dbr(ram1_dbr_o),
         .dbw(dbw),
@@ -158,11 +153,15 @@ module system(
         .clk(clk25),
         .cpu_clk(cpu_clk),
         .rst(rst),
+        .cpu_addr(addr[1:0]),
+        .cpu_dbw(dbw),
+        .cpu_we(we & vga1_s),
         .hsync(vga_h),
         .vsync(vga_v),
         .red(vga_r),
         .green(vga_g),
-        .blue(vga_b)
+        .blue(vga_b),
+        .intensity(vga_i)
     );
 
     wire led_r, led_g, led_b;

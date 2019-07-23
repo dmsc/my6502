@@ -13,4 +13,5 @@ set_io vga_v 38
 set_io vga_r 42
 set_io vga_g 36
 set_io vga_b 43
+set_io vga_i 34
 

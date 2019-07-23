@@ -22,6 +22,7 @@ module upduino(
     output vga_r,
     output vga_g,
     output vga_b,
+    output vga_i,
     input  iclk
     );
 
@@ -49,7 +50,8 @@ module upduino(
         .vga_v(vga_v),
         .vga_r(vga_r),
         .vga_g(vga_g),
-        .vga_b(vga_b)
+        .vga_b(vga_b),
+        .vga_i(vga_i)
     );
 
     reg [3:0] cdiv = 4'b0;

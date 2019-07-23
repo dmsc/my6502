@@ -15,16 +15,42 @@ module vga(
     input  clk,         // Main clock
     input  cpu_clk,     // CPU clock to manage interleave
     input  rst,
+    input [1:0] cpu_addr, // CPU address for write to registers
+    input [7:0] cpu_dbw,  // CPU data bus write
+    input  cpu_we,        // CPU write enable
     output hsync,
     output vsync,
-    output red,
-    output green,
-    output blue,
+    output reg red,
+    output reg green,
+    output reg blue,
+    output reg intensity,
     output [12:0] addr_out,
     input [7:0] data_in
     );
 
     parameter CLK_HZ = 25175000; // 25.175MHz
+
+    // Implement VGA registers:
+    //  00 : Background and Foreground colors (4 bit each)
+    reg [3:0] fore_color;
+    reg [3:0] back_color;
+    always @(posedge cpu_clk or posedge rst)
+    begin
+        if (rst)
+        begin
+            fore_color <= 4'hF;
+            back_color <= 4'h0;
+        end
+        else if( cpu_we )
+        begin
+            if( cpu_addr == 2'b00 )
+            begin
+                fore_color <= cpu_dbw[3:0];
+                back_color <= cpu_dbw[7:4];
+            end
+        end
+    end
+
 
     // VGA video timings, from microseconds to clocks:
     //
@@ -89,9 +115,24 @@ module vga(
     // Video generation: sync pulses
     assign hsync = (hcount < HSP_CLK) ? 0 : 1;
     assign vsync = (vcount < VSP_CLK) ? 0 : 1;
-    assign red   = (vactive && hactive) ? data_r[0] : 0;
-    assign green = (vactive && hactive) ? data_g[0] : 0;
-    assign blue  = (vactive && hactive) ? data_b[0] : 0;
+
+    always @(*)
+    begin
+        if (vactive && hactive )
+        begin
+            red       = data_bw[0] ? fore_color[0] : back_color[0];
+            green     = data_bw[0] ? fore_color[1] : back_color[1];
+            blue      = data_bw[0] ? fore_color[2] : back_color[2];
+            intensity = data_bw[0] ? fore_color[3] : back_color[3];
+        end
+        else
+        begin
+            red       = 0;
+            green     = 0;
+            blue      = 0;
+            intensity = 0;
+        end
+    end
 
     // Memory counters:
     reg [9:0] line_addr; // Address of current line, missing low addresses
@@ -105,9 +146,7 @@ module vga(
 
     // Output data
     reg [7:0] mdata_in;
-    reg [7:0] data_r;
-    reg [7:0] data_g;
-    reg [7:0] data_b;
+    reg [7:0] data_bw;
 
     // Video data
     always @(posedge clk)
@@ -123,15 +162,11 @@ module vga(
             if (hcount[3:0] == 4'b1111)
             begin
                 // Read from memory
-                data_r <= mdata_in;
-                data_g <= mdata_in;
-                data_b <= mdata_in;
+                data_bw <= mdata_in;
             end
             else if (hcount[0] == 1)
             begin
-                data_r  <= { 1'b0, data_r[7:1] };
-                data_g  <= { 1'b0, data_g[7:1] };
-                data_b  <= { 1'b0, data_b[7:1] };
+                data_bw  <= { 1'b0, data_bw[7:1] };
             end
             if (h_end && !vcount[0])
                 line_addr <= line_addr + 5;
