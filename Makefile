@@ -73,6 +73,8 @@ $(BUILDDIR)/%_syn.v: $(BUILDDIR)/%.json
 
 # Post synthesis simulator
 $(BUILDDIR)/%_post_test: tests/%_post_tb.v $(BUILDDIR)/%_syn.v
+	# Filter out PLL cell to allow simulation
+	sed -i 's/ SB_PLL40_CORE/ TB_SB_PLL40_CORE/' $(BUILDDIR)/$*_syn.v
 	iverilog -g2012 -o $@ -D POST_SYNTHESIS $< $(BUILDDIR)/$*_syn.v  \
 	    `yosys-config --datdir/ice40/cells_sim.v`
 

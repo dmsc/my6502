@@ -11,33 +11,64 @@
 
 // Post synthesis test
 
-`timescale 1us/1ns
+`timescale 1ns/1ps
 
-module TB_SB_HFOSC(
-    output CLKHF,
-    input CLKHFEN,
-    input CLKHFPU
+// Simulate the ice40 PLL
+module TB_SB_PLL40_CORE (
+        input   REFERENCECLK,
+        output  PLLOUTCORE,
+        output  PLLOUTGLOBAL,
+        input   EXTFEEDBACK,
+        input   [7:0] DYNAMICDELAY,
+        output  LOCK,
+        input   BYPASS,
+        input   RESETB,
+        input   LATCHINPUTVALUE,
+        output  SDO,
+        input   SDI,
+        input   SCLK
 );
-    parameter CLKHF_DIV = 2'b0;
+        parameter FEEDBACK_PATH = "SIMPLE";
+        parameter DELAY_ADJUSTMENT_MODE_FEEDBACK = "FIXED";
+        parameter DELAY_ADJUSTMENT_MODE_RELATIVE = "FIXED";
+        parameter SHIFTREG_DIV_MODE = 1'b0;
+        parameter FDA_FEEDBACK = 4'b0000;
+        parameter FDA_RELATIVE = 4'b0000;
+        parameter PLLOUT_SELECT = "GENCLK";
+        parameter DIVR = 4'b0000;
+        parameter DIVF = 7'b0000000;
+        parameter DIVQ = 3'b000;
+        parameter FILTER_RANGE = 3'b000;
+        parameter ENABLE_ICEGATE = 1'b0;
+        parameter TEST_MODE = 1'b0;
+        parameter EXTERNAL_DIVIDE_FACTOR = 1;
 
-    reg clk;
-    always #0.083 clk = (clk === 1'b0);
-    assign CLKHF = clk & CLKHFEN;
-
+        reg [3:0] clk = 0;
+        reg lock = 0;
+        always @(posedge REFERENCECLK)
+        begin
+            clk <= clk + 1;
+            if( clk == 4'b1111 )
+                lock <= 1;
+        end
+        // Simply pass clock from input to output
+        assign PLLOUTCORE = REFERENCECLK;
+        assign LOCK = lock;
 endmodule
 
 // Expected output from TX:
 // ------------------------
-// S11010100T   $2B     +
-// S11101010T   $57     W       (400ms)
-// S10100110T   $65     e
-// S00110110T   $6C     l
-// S11000110T   $63     c
-// S11110110T   $6F     o
+// S11000100T   $23     #
+// S10110000T   $0D     CR      (400ms)
+// S01010000T   $0A     LF
+// S00000110T   $60     `
 
 module test;
 
-    wire tx,rx, clk_1, clk_2;
+    wire tx,rx;
+    reg clk_1 = 0;
+    // Simulate clock at 25.175MHz
+    always #19.861 clk_1 = !clk_1;
 
     initial begin
         string vcd_file;
@@ -47,10 +78,14 @@ module test;
         end
         $dumpfile(vcd_file);
         $dumpvars(0,test);
-        # 500000 $finish; // Simulate 500ms
+        $timeformat(-3,2," ms",4);
+        # 17ms $finish; // Simulate slightly more than one frame
     end
 
+    always #250us begin
+        $display("Simulated %t", $time);
+    end
 
-    upduino up(.uart_tx(tx), .uart_rx(rx), .clk_1(clk_1), .clk_2(clk_2) );
+    upduino up(.uart_tx(tx), .uart_rx(rx), .iclk(clk_1) );
 
 endmodule
