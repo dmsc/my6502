@@ -59,15 +59,18 @@ module system(
         .PC_MONITOR(monitor)
     );
 
-    wire timer1_s, uart1_s, rom1_s, ram1_s, rgb1_s, vga1_s;
+    wire timer1_s, uart1_s, rom1_s, ram1_s, rgb1_s, vga1_s, vram1_s;
     assign timer1_s = (addr[15:5] == 11'b11111110000); // $FE00 - $FE1F
     assign uart1_s  = (addr[15:5] == 11'b11111110001); // $FE20 - $FE3F
     assign rgb1_s   = (addr[15:5] == 11'b11111110010); // $FE40 - $FE5F
     assign vga1_s   = (addr[15:5] == 11'b11111110011); // $FE60 - $FE7F
-    assign rom1_s   = (addr[15:8] ==  8'hFF);          // $FF00 - $FFFF
-    assign ram1_s   = ((&(addr[15:9])) ==  0);         // $0000 - $FDFF
+    assign rom1_s   = (addr[15:8] ==  8'b11111111);    // $FF00 - $FFFF
+    assign vram1_s  = (addr[15:12] == 4'b1101)         //
+                   || (addr[15:12] == 4'b1110);        // $D000 - $EFFF
+    assign ram1_s   = (addr[15:9] !=  7'b1111111)      // $0000 - $CFFF + $F000 - $FDFF
+                   && (!vram1_s);                      //
 
-    reg timer1_cs, uart1_cs, rom1_cs, ram1_cs;
+    reg timer1_cs, uart1_cs, rom1_cs, ram1_cs, vram1_cs;
     always @(posedge cpu_clk or posedge rst)
     begin
         if (rst)
@@ -76,7 +79,7 @@ module system(
             uart1_cs  <= 0;
             rom1_cs   <= 0;
             ram1_cs   <= 0;
-            ram1_dbr  <= 8'b0;
+            vram1_cs  <= 0;
         end
         else
         begin
@@ -84,14 +87,27 @@ module system(
             uart1_cs  <= uart1_s;
             rom1_cs   <= rom1_s;
             ram1_cs   <= ram1_s;
-            ram1_dbr <= ram1_dbr_o;
+            vram1_cs  <= vram1_s;
+        end
+    end
+
+    always @(posedge clk25 or posedge rst)
+    begin
+        if (rst)
+        begin
+            vram1_dbr <= 8'b0;
+        end
+        else if (cpu_clk == 0)
+        begin
+            vram1_dbr <= vram1_dbr_o;
         end
     end
 
     wire [7:0] timer1_dbr;
     wire [7:0] uart1_dbr;
     wire [7:0] rom1_dbr;
-    reg  [7:0] ram1_dbr;
+    wire [7:0] ram1_dbr;
+    reg  [7:0] vram1_dbr;
 
     /* This synthesizes to more gates:
     assign dbr = timer1_cs ? timer1_dbr :
@@ -102,7 +118,8 @@ module system(
     assign dbr = (timer1_cs ? timer1_dbr : 8'hFF) &
                  (uart1_cs  ? uart1_dbr : 8'hFF) &
                  (rom1_cs   ? rom1_dbr : 8'hFF) &
-                 (ram1_cs   ? ram1_dbr : 8'hFF) ;
+                 (ram1_cs   ? ram1_dbr : 8'hFF) &
+                 (vram1_cs  ? vram1_dbr : 8'hFF) ;
 
     timer timer1(
         .dbr(timer1_dbr),
@@ -132,30 +149,43 @@ module system(
         .clk(cpu_clk)
     );
 
-    // RAM is accessed at double rate, interleaving VGA and CPU
-    wire [12:0] vga_addr;
-    wire [7:0] ram1_dbr_o;
+    // Video RAM is accessed at double rate, interleaving VGA and CPU
+    wire [15:0] vga_addr;
+    wire [7:0] vram1_dbr_o;
 
-    wire [15:0] ram_addr = (cpu_clk == 1) ? addr : { 3'b110, vga_addr };
-    wire ram_we  = (cpu_clk == 1) ? we & ram1_s : 0;
+    wire [15:0] vmem_cpu_addr = { vga_page, !addr[12], addr[11:0] };
+    wire [15:0] vram_addr = (cpu_clk == 1) ? vmem_cpu_addr : vga_addr;
+    wire vram_we  = (cpu_clk == 1) ? we & vram1_s : 0;
 
-    ram ram1(
-        .dbr(ram1_dbr_o),
+    // Video RAM, mapped 8Kb at a time from $C000 to $DFFF
+    ram vram1(
+        .dbr(vram1_dbr_o),
         .dbw(dbw),
-        .addr(ram_addr[15:0]),
-        .we(ram_we),
+        .addr(vram_addr),
+        .we(vram_we),
         .clk(clk25)
     );
 
+    // Main CPU RAM, 64Kb mapped from $0000 to $FDFF
+    ram ram1(
+        .dbr(ram1_dbr),
+        .dbw(dbw),
+        .addr(addr),
+        .we(we),
+        .clk(cpu_clk)
+    );
+
+    wire [2:0] vga_page;
     vga vga1(
         .addr_out(vga_addr),
-        .data_in(ram1_dbr_o),
+        .data_in(vram1_dbr_o),
         .clk(clk25),
         .cpu_clk(cpu_clk),
         .rst(rst),
         .cpu_addr(addr[1:0]),
         .cpu_dbw(dbw),
         .cpu_we(we & vga1_s),
+        .vga_page(vga_page),
         .hsync(vga_h),
         .vsync(vga_v),
         .red(vga_r),

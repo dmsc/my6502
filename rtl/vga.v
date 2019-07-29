@@ -18,13 +18,14 @@ module vga(
     input [1:0] cpu_addr, // CPU address for write to registers
     input [7:0] cpu_dbw,  // CPU data bus write
     input  cpu_we,        // CPU write enable
+    output [2:0] vga_page,// CPU access page to video RAM
     output hsync,
     output vsync,
     output reg red,
     output reg green,
     output reg blue,
     output reg intensity,
-    output [12:0] addr_out,
+    output [15:0] addr_out,
     input [7:0] data_in
     );
 
@@ -34,12 +35,15 @@ module vga(
     //  00 : Background and Foreground colors (4 bit each)
     reg [3:0] fore_color;
     reg [3:0] back_color;
+    //  01 : VGA access page
+    reg [2:0] vga_page;
     always @(posedge cpu_clk or posedge rst)
     begin
         if (rst)
         begin
             fore_color <= 4'hF;
             back_color <= 4'h0;
+            vga_page   <= 0;
         end
         else if( cpu_we )
         begin
@@ -47,6 +51,10 @@ module vga(
             begin
                 fore_color <= cpu_dbw[3:0];
                 back_color <= cpu_dbw[7:4];
+            end
+            else if( cpu_addr == 2'b01 )
+            begin
+                vga_page <= cpu_dbw[2:0];
             end
         end
     end
