@@ -3,12 +3,12 @@
 
 ; TIMER registers:
 TIMERL  = $FE00   ; TIMER low counter (R/W)
-TIMERH  = $FE01   ; TIMER high coutner (R/W)
+TIMERH  = $FE01   ; TIMER high counter (R/W)
 TIMERC  = $FE02   ; TIMER status (R), control (W)
 
 ; UART registers:
 UARTD   = $FE20   ; UART RX data (R) , TX data (W)
-UARTS   = $FE21   ; UART status (R) , clear flafs (W)
+UARTS   = $FE21   ; UART status (R) , clear flags (W)
 
 ; LED Driver registers:
 LEDDPWRR = $FE41   ; LED Driver Pulse Width Register for RED (W)
@@ -25,6 +25,11 @@ LEDDOFR  = $FE4B   ; LED Driver OFF Time Register (W)
 
 ; VGA registers
 VGACOLOR = $FE60   ; VGA fore-back colors
+VGAPAGE  = $FE61   ; VGA access page
+
+; VGA memory
+VIDEOMEM = $D000   ; Video memory - 8kB from $D000 to $EFFF.
+
 
 ptr     = 0   // Use locations 0,1 as pointer
 tmp     = 2
@@ -47,15 +52,15 @@ get_hex .proc
         sta     tmp
 get_low_hex:
         jsr     get_char
-        eor     #'0'
-        cmp     #10
-        bcc     digit
+        eor     #'0'            ; Transform '0'-'9' to 0-9
+        cmp     #10             ; Check if digit...
+        bcc     digit           ; ...and accept.
         ora     #$20            ; Lower to upper case
-        adc     #$88
-        cmp     #$FA
-        bcc     prompt          ; Not an hex number
+        sbc     #'A'^'0'        ; Transform 'A'-'F' to 0-5
+        cmp     #$06            ; Check if 'A' to 'F'...
+        bcs     prompt          ; ...not an hex number, reject
+        adc     #$0A            ; Fix to 10-15.
 digit:
-        and     #$0F
         ora     tmp
         rts
     .endp
@@ -73,8 +78,8 @@ wait:
         // Ok, we have a character, return it
         lda     UARTD
         sta     UARTS
-        cmp     #'!'
-        bcc     get_char
+        cmp     #'!'    ; Ignore spaces and control characters.
+        bcc     wait
 
     .endp       ; Fall-through
 
@@ -175,8 +180,9 @@ enter_loop:
         tya     ; Fall through next comparison with A=10, so it is false.
 
 not_enter:
+        ora     #$20    ; make uppercase -> lowercase
         // "S" means "SHOW" 16 bytes
-        eor     #'S'
+        eor     #'s'
         bne     not_show
 
 show_loop:

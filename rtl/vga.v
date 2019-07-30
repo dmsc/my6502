@@ -42,7 +42,7 @@ module vga(
         if (rst)
         begin
             fore_color <= 4'hF;
-            back_color <= 4'h0;
+            back_color <= 4'h1;
             vga_page   <= 0;
         end
         else if( cpu_we )
