@@ -2,7 +2,8 @@
 set_io uart_rx   12
 set_io uart_tx   21
 
-set_io iclk 2
+## pins possible: 35 X12/Y31
+set_io iclk 35
 
 set_io led_r 39
 set_io led_g 40
