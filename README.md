@@ -9,7 +9,12 @@ following hardware:
 - An UART at fixed 115200 baud rate, at address $FE20.
 - An RGB led controller (with PWM, ramps and On/Off times), at address $FE40.
 - VGA video controller, registers at address $FE60.
-- 64k bytes of VGA memory, 16 color output 320x204 pixels, mapped in 8k banks at address $D000 to $EFFF.
+- 64k bytes of VGA memory, 640x480 video with 4 graphics modes:
+  - 16 color, 320x480 (or 320x240, 320x160, etc.) pixels, two pixels per byte.
+  - 2 color, 640x480 (or 640x240, etc.) pixels, 8 pixels per two bytes, one byte bitmap data and one byte fore/back color.
+  - 2 color, 320x480 (or 320x240, 320x160, etc.), 8 pixels per two bytes, one byte bitmap data and one byte fore/back color.
+  - 2 color text mode, 80 characters of arbitrary height from 8x2 to 8x32, one byte character, one byte fore/back color, font in RAM.
+- All graphics modes support arbitrary memory start and height, font can be at any location.
 - 256 bytes of boot ROM at address $FF00 to $FFFF.
 - 63.5k bytes of RAM, at address $0000 to $FDFF.
 
