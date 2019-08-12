@@ -182,7 +182,7 @@ module system(
         .clk(clk25),
         .cpu_clk(cpu_clk),
         .rst(rst),
-        .cpu_addr(addr[1:0]),
+        .cpu_addr(addr[2:0]),
         .cpu_dbw(dbw),
         .cpu_we(we & vga1_s),
         .vga_page(vga_page),

@@ -24,11 +24,17 @@ LEDDONR  = $FE4A   ; LED Driver ON Time Register (W)
 LEDDOFR  = $FE4B   ; LED Driver OFF Time Register (W)
 
 ; VGA registers
-VGACOLOR = $FE60   ; VGA fore-back colors
-VGAPAGE  = $FE61   ; VGA access page
+VGAPAGE  = $FE60   ; VGA access page
+VGAMODE  = $FE61   ; VGA graphics mode
+                   ; Bits 0-1 : Mode for each line,
+                   ;            00 = TEXT, 01 = HI_RES, 10 = HI_COLOR, 11 = LOW_RES
+                   ; Bits 3-7 : Height of each line in pixels - 1.
+VGAGBASE = $FE62   ; VGA graphics bitmap address, 2 bytes.
+VGACBASE = $FE64   ; VGA color memory address, 2 bytes
+VGAFBASE = $FE66   ; VGA font page - 1 byte.
 
-; VGA memory
-VIDEOMEM = $D000   ; Video memory - 8kB from $D000 to $EFFF.
+; VGA memory window
+VIDEOMEM = $D000   ; Video memory window - 8kB from $D000 to $EFFF.
 
 
 ptr     = 0   // Use locations 0,1 as pointer
