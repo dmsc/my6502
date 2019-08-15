@@ -23,6 +23,10 @@ module upduino(
     output vga_g,
     output vga_b,
     output vga_i,
+    inout  spi0_mosi,
+    inout  spi0_miso,
+    inout  spi0_sclk,
+    inout  spi0_cs0,
     input  iclk
     );
 
@@ -46,6 +50,10 @@ module upduino(
         .led_r(led_r),
         .led_g(led_g),
         .led_b(led_b),
+        .spi0_mosi(spi0_mosi),
+        .spi0_miso(spi0_miso),
+        .spi0_sclk(spi0_sclk),
+        .spi0_cs0(spi0_cs0),
         .vga_h(vga_h),
         .vga_v(vga_v),
         .vga_r(vga_r),

@@ -17,8 +17,8 @@ module test;
   reg clk = 0;
   always #1 clk = !clk;
 
-  reg rst;
-  wire rx, tx;
+  reg rst, miso_reg;
+  wire rx, tx, mosi, miso, ss0, sclk;
 
   initial begin
      string vcd_file;
@@ -42,13 +42,33 @@ module test;
      # 500000 $finish;
   end
 
+  initial begin
+     miso_reg = 1;
+     # 22889
+     miso_reg = 0;
+     # 48
+     miso_reg = 1;
+     # 8
+     miso_reg = 0;
+     # 48
+     miso_reg = 1;
+     # 20
+     miso_reg = 0;
+     forever miso_reg = #76 !miso_reg;
+  end
+  assign miso = (ss0 == 0) ? miso_reg : 1'bz;
+
   system #(
       .CLK_HZ(9*115200)
   ) sys1 (
       .rst(rst),
       .clk25(clk),
       .uart_tx(tx),
-      .uart_rx(rx)
+      .uart_rx(rx),
+      .spi0_miso(miso),
+      .spi0_mosi(mosi),
+      .spi0_cs0(ss0),
+      .spi0_sclk(sclk)
   );
 
 

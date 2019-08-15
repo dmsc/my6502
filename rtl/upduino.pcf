@@ -16,3 +16,8 @@ set_io vga_g 36
 set_io vga_b 43
 set_io vga_i 34
 
+set_io spi0_mosi 14
+set_io spi0_miso 17
+set_io spi0_sclk 15
+set_io spi0_cs0 16
+

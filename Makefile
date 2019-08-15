@@ -21,6 +21,7 @@ RTL=\
     rtl/pll.v\
     rtl/ram.v\
     rtl/rgbled.v\
+    rtl/spi.v\
     rtl/system.v\
     rtl/timer.v\
     rtl/uart.v\
