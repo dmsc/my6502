@@ -27,12 +27,15 @@ RTL=\
     rtl/uart.v\
     rtl/vga.v\
 
+# Firmware to save into flash at address 0x20000.
+FIRMWARE=$(BUILDDIR)/firmware.bin
+
 # Clock constrains for packer:
 SDC_FILE=clk-pre.sdc
 
 HEXFILE=$(BUILDDIR)/minirom.hex
 
-all: $(TARGET)
+all: $(TARGET) $(FIRMWARE)
 
 .PHONY: test
 test: $(TESTS:%=$(BUILDDIR)/%.vcd)
@@ -88,10 +91,10 @@ $(BUILDDIR)/%.vcd: $(BUILDDIR)/%_test
 	vvp $< +vcd=$@
 
 # Assemble sources
-asm/minirom.obx: asm/minirom.asm
-	mads $<
+$(BUILDDIR)/%.bin: asm/%.asm | $(BUILDDIR)
+	mads $< -l:$(@:.bin=.lst) -o:$@
 
-$(BUILDDIR)/minirom.hex: asm/minirom.obx | $(BUILDDIR)
+$(BUILDDIR)/%.hex: $(BUILDDIR)/%.bin | $(BUILDDIR)
 	od -An -tx1 -w1 -v $< > $@
 
 # Make folders
@@ -120,3 +123,5 @@ $(BUILDDIR)/upduino_test: $(HEXFILE)
 $(BUILDDIR)/upduino.blif: $(HEXFILE)
 $(BUILDDIR)/upduino.json: $(HEXFILE)
 
+$(BUILDDIR)/minirom.bin: asm/defines.inc
+$(BUILDDIR)/firmware.bin: asm/defines.inc
