@@ -14,14 +14,17 @@ following hardware:
   - 2 color, 640x480 (or 640x240, etc.) pixels, 8 pixels per two bytes, one byte bitmap data and one byte fore/back color.
   - 2 color, 320x480 (or 320x240, 320x160, etc.), 8 pixels per two bytes, one byte bitmap data and one byte fore/back color.
   - 2 color text mode, 80 characters of arbitrary height from 8x2 to 8x32, one byte character, one byte fore/back color, font in RAM.
+- A simple SPI controller capable of reading and writing to the configuration FLASH, used as non-volatile storage. Currently the SPI clock is half the CPU clock, the code is capable of reading one byte from FLASH each 19 CPU cycles, about 660Kbyte/sec.
 - All graphics modes support arbitrary memory start and height, font can be at any location.
 - 256 bytes of boot ROM at address $FF00 to $FFFF.
 - 63.5k bytes of RAM, at address $0000 to $FDFF.
 
+The video controller runs at 25.13MHz to generate the video signal, the 6502 CPU runs at half that (12.56MHz), so the video controller access the VRAM in even cycles and the CPU at odd cycles, this allows sharing the bus without conflicts.
+
 The implementation was tested with an Upduino board, this is a cheap (US$10)
 board with an ice40-up5k FPGA chip.
 
-You need to supply a 12MHz clock to pin 35.
+You need to supply a 12MHz clock to pin 35, the on-chip PLL is used to raise this to 25.13MHz.
 
 See the file rtl/upduino.pcf for the current pinout.
 

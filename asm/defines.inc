@@ -37,11 +37,21 @@ VGAFBASE = $FE66   ; VGA font page - 1 byte.
 VIDEOMEM = $D000   ; Video memory window - 8kB from $D000 to $EFFF.
 
 ; SPI registers
-SPI_CTRL  = $FE80
-SPI_STAT  = $FE80
-SPI_WRITE = $FE81
-SPI_READ  = $FE81
+SPI_CTRL  = $FE80  ; SPI control register, any write stops the transaction
+                   ;  (CS goes high, bus is tristated)
+SPI_STAT  = $FE80  ; SPI status register:
+                   ;  Bit 7: trnsmission pending.
+                   ;  Bit 6: togles each received byte available.
+                   ;  Bit 0: CS state (1 = SPI disabled, 0 = enabled).
+SPI_WRITE = $FE81  ; SPI write, a write starts a SPI transsaction, byte is
+                   ;  copied to the hold register and will transmit after
+                   ;  current one ends.
+SPI_READ  = $FE81  ; SPI read, reads data in the reception hold register.
+                   ;  after each byte trasmited.
 
-SPI_BUFFER = 0          ; Use locations 0,1 as pointer to SPI load routine
-SPI_LOAD   = $FFD0      ; Address of SPI load routine
+; SPI transfer routines in ROM:
+SPI_LOAD   = $FFD0      ; Address of SPI load routine. Reads 256 bytes
+                        ; from flash to the SPI_BUFFER address.
+                        ; On input, A/X is the sector to read from FLASH
+SPI_BUFFER = 0          ; Use locations 0,1 as pointer to SPI buffer
 
