@@ -21,3 +21,6 @@ set_io spi0_miso 17
 set_io spi0_sclk 15
 set_io spi0_cs0 16
 
+set_io ps2_data 31
+set_io ps2_clock 37
+

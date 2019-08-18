@@ -27,6 +27,8 @@ module upduino(
     inout  spi0_miso,
     inout  spi0_sclk,
     inout  spi0_cs0,
+    inout  ps2_data,
+    inout  ps2_clock,
     input  iclk
     );
 
@@ -54,6 +56,8 @@ module upduino(
         .spi0_miso(spi0_miso),
         .spi0_sclk(spi0_sclk),
         .spi0_cs0(spi0_cs0),
+        .ps2_data(ps2_data),
+        .ps2_clock(ps2_clock),
         .vga_h(vga_h),
         .vga_v(vga_v),
         .vga_r(vga_r),

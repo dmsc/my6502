@@ -55,3 +55,15 @@ SPI_LOAD   = $FFD0      ; Address of SPI load routine. Reads 256 bytes
                         ; On input, A/X is the sector to read from FLASH
 SPI_BUFFER = 0          ; Use locations 0,1 as pointer to SPI buffer
 
+; PS2 registers
+PS2_CTRL   = $FEA0      ; Control register, write for ACK current data and
+                        ; receive next.
+PS2_STAT   = $FEA0      ; Status:
+                        ;  bit 7: new data hold in register.
+                        ;  bit 6: Stop bit, 1 == ok.
+                        ;  bit 5: Parity bit
+                        ;  bit 2: Start bit, 0 == ok.
+                        ;  bit 1: Data complete, 1 == complete.
+PS2_DATA   = $FEA1      ; Received data, valid only if bit 7 of PS2_STAT os 1.
+
+

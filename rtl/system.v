@@ -23,6 +23,8 @@ module system(
     inout spi0_miso,    // SPI MISO
     inout spi0_sclk,    // SPI SCLK
     inout spi0_cs0,     // SPI CS0
+    inout ps2_data,     // PS/2 DATA
+    inout ps2_clock,    // PS/2 CLOCK
     output vga_h,       // VGA HSync
     output vga_v,       // VGA VSync
     output vga_r,       // VGA RED
@@ -63,19 +65,20 @@ module system(
         .PC_MONITOR(monitor)
     );
 
-    wire timer1_s, uart1_s, rom1_s, ram1_s, rgb1_s, spi1_s, vga1_s, vram1_s;
+    wire timer1_s, uart1_s, rom1_s, ram1_s, rgb1_s, spi1_s, psk1_s, vga1_s, vram1_s;
     assign timer1_s = (addr[15:5] == 11'b11111110000); // $FE00 - $FE1F
     assign uart1_s  = (addr[15:5] == 11'b11111110001); // $FE20 - $FE3F
     assign rgb1_s   = (addr[15:5] == 11'b11111110010); // $FE40 - $FE5F
     assign vga1_s   = (addr[15:5] == 11'b11111110011); // $FE60 - $FE7F
     assign spi1_s   = (addr[15:5] == 11'b11111110100); // $FE80 - $FE9F
+    assign psk1_s   = (addr[15:5] == 11'b11111110101); // $FEA0 - $FEBF
     assign rom1_s   = (addr[15:8] ==  8'b11111111);    // $FF00 - $FFFF
     assign vram1_s  = (addr[15:12] == 4'b1101)         //
                    || (addr[15:12] == 4'b1110);        // $D000 - $EFFF
     assign ram1_s   = (addr[15:9] !=  7'b1111111)      // $0000 - $CFFF + $F000 - $FDFF
                    && (!vram1_s);                      //
 
-    reg timer1_cs, uart1_cs, spi1_cs, rom1_cs, ram1_cs, vram1_cs;
+    reg timer1_cs, uart1_cs, spi1_cs, psk1_cs, rom1_cs, ram1_cs, vram1_cs;
     always @(posedge cpu_clk or posedge rst)
     begin
         if (rst)
@@ -83,6 +86,7 @@ module system(
             timer1_cs <= 0;
             uart1_cs  <= 0;
             spi1_cs   <= 0;
+            psk1_cs   <= 0;
             rom1_cs   <= 0;
             ram1_cs   <= 0;
             vram1_cs  <= 0;
@@ -92,6 +96,7 @@ module system(
             timer1_cs <= timer1_s;
             uart1_cs  <= uart1_s;
             spi1_cs   <= spi1_s;
+            psk1_cs   <= psk1_s;
             rom1_cs   <= rom1_s;
             ram1_cs   <= ram1_s;
             vram1_cs  <= vram1_s;
@@ -113,6 +118,7 @@ module system(
     wire [7:0] timer1_dbr;
     wire [7:0] uart1_dbr;
     wire [7:0] spi1_dbr;
+    wire [7:0] psk1_dbr;
     wire [7:0] rom1_dbr;
     wire [7:0] ram1_dbr;
     reg  [7:0] vram1_dbr;
@@ -126,6 +132,7 @@ module system(
     assign dbr = (timer1_cs ? timer1_dbr : 8'hFF) &
                  (uart1_cs  ? uart1_dbr : 8'hFF) &
                  (spi1_cs   ? spi1_dbr : 8'hFF) &
+                 (psk1_cs   ? psk1_dbr : 8'hFF) &
                  (rom1_cs   ? rom1_dbr : 8'hFF) &
                  (ram1_cs   ? ram1_dbr : 8'hFF) &
                  (vram1_cs  ? vram1_dbr : 8'hFF) ;
@@ -230,5 +237,16 @@ module system(
         .spi_cs0(spi0_cs0)
     );
 
+    ps2_kbd psk1(
+        .dbr(psk1_dbr),
+        .dbw(dbw),
+        .addr(addr[0]),
+        .we(we & psk1_s),
+        .rst(rst),
+        .clk(cpu_clk),
+        // I/O pins:
+        .ps2_data(ps2_data),
+        .ps2_clock(ps2_clock)
+    );
 endmodule
 

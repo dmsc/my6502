@@ -19,6 +19,7 @@ RTL=\
     rtl/cpu.v\
     rtl/minirom.v\
     rtl/pll.v\
+    rtl/ps2.v\
     rtl/ram.v\
     rtl/rgbled.v\
     rtl/spi.v\

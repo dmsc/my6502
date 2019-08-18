@@ -8,6 +8,7 @@ following hardware:
 - A reloadable 16 bit timer module, at address $FE00.
 - An UART at fixed 115200 baud rate, at address $FE20.
 - An RGB led controller (with PWM, ramps and On/Off times), at address $FE40.
+- PS/2 keyboard interface.
 - VGA video controller, registers at address $FE60.
 - 64k bytes of VGA memory, 640x480 video with 4 graphics modes:
   - 16 color, 320x480 (or 320x240, 320x160, etc.) pixels, two pixels per byte.
@@ -27,6 +28,8 @@ board with an ice40-up5k FPGA chip.
 You need to supply a 12MHz clock to pin 35, the on-chip PLL is used to raise this to 25.13MHz.
 
 See the file rtl/upduino.pcf for the current pinout.
+
+The PS/2 keyboard interface assumes a 3.3V supply to the keyboard, most keyboards will work with that voltage. The I/O is configured for 3.3Kohms internal pull-up and open-collector output, and the CLOCK line is driven low to stop the keyboard from sending packets.
 
 To generate the VGA levels, a simple 8 resistor divider is used:
 

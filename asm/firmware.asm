@@ -56,21 +56,43 @@ msg_loop
 end_msg
 
 char_loop:
-        bit     UARTS
-        bvc     char_loop
+        bit     PS2_STAT
+        bpl     char_loop
 
         // Ok, we have a character, return it
-        lda     UARTD
-        sta     UARTS
+        lda     PS2_DATA
+        sta     PS2_CTRL
 
-        cmp     #9
-        beq     ret1
+        pha
 
+        jsr     print_hex
+        lda     #' '
         jsr     screen_putchar
+
+        pla
+        cmp     #$76
+        beq     ret1
         jmp     char_loop
 
         ; end....
 ret1:   rts
+
+print_hex .proc
+        pha
+        lsr
+        lsr
+        lsr
+        lsr
+        jsr     hex_digit
+        pla
+        and     #$0F
+hex_digit:
+        sed			; set decimal mode
+	cmp	#$0A		; set carry for +1 if >9
+	adc	#'0'		; add ASCII "0"
+	cld			; clear decimal mode
+        jmp     screen_putchar
+    .endp
 
 message:
         .byte 'my6502 Computer - (c) 2019 dmsc', 10
@@ -298,6 +320,9 @@ calc_address
         adc     #$10
         sta     scr_cptr+1
         rts
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+; Keyboard handler
 
         ; Now the font data in ROM
         org     $2200
