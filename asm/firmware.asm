@@ -63,9 +63,17 @@ char_loop:
         lda     PS2_DATA
         sta     PS2_CTRL
 
+        ldx     #$2F
+        bvc     k_press
+        ldx     #$4F
+k_press stx     scr_color
+
         pha
 
         jsr     print_hex
+
+        ldx     #$1F
+        stx     scr_color
         lda     #' '
         jsr     screen_putchar
 

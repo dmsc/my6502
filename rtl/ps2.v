@@ -61,8 +61,10 @@ module ps2_kbd (
 
 
     reg rx_hold;
-    reg [11:0] rx_shift; // Includes Start, Parity and Stop.
+    reg [10:0] rx_shift; // Includes Start, Parity and Stop.
     reg state;           // Clock state
+    reg code_rel;        // Processed a release code   (F0)
+    reg code_ext;        // Processed an extended code (E0)
 
     assign clock_out = !rx_hold;
 
@@ -70,9 +72,11 @@ module ps2_kbd (
     begin
         if (rst)
         begin
-            rx_shift <= {1, 11'b0};
+            rx_shift <= {1, 10'b0};
             rx_hold  <= 0;
             state    <= 0;
+            code_rel <= 0;
+            code_ext <= 0;
         end
         else
         begin
@@ -82,7 +86,9 @@ module ps2_kbd (
                 if( we )
                 begin
                     rx_hold  <= 0;
-                    rx_shift <= {1, 11'b0};
+                    rx_shift <= {1, 10'b0};
+                    code_rel <= 0;
+                    code_ext <= 0;
                 end
             end
             else
@@ -95,14 +101,31 @@ module ps2_kbd (
                     else
                     begin
                         // On EVEN states we shift in the data value
-                        rx_shift <= {data_in, rx_shift[11:1] };
                         state <= 0;
-                        if( rx_shift[1] )
+                        if( rx_shift[0] )
                         begin
                             // Last transition, we hold received byte and
                             // go to initial state.
-                            rx_hold <= 1;
+                            if( rx_shift[9:2] == 8'hF0 ||
+                                rx_shift[9:2] == 8'hE0 ||
+                                rx_shift[9:2] == 8'hE1 )
+                            begin
+                                // This is a "release" code or an "extended"
+                                // code, skip and process next code
+                                if (rx_shift[6] == 1)
+                                    code_rel <= 1;
+                                else
+                                    code_ext <= 1;
+                                rx_hold  <= 0;
+                                rx_shift <= {1, 10'b0};
+                            end
+                            else
+                            begin
+                                rx_hold <= 1;
+                            end
                         end
+                        else
+                            rx_shift <= {data_in, rx_shift[10:1] };
                     end
                 end
             end
@@ -111,8 +134,9 @@ module ps2_kbd (
             if (!we)
             begin
                 case(addr)
-                    2'b00: dbr <= { rx_hold, rx_shift[11:10], 3'b0, rx_shift[1:0] };
-                    2'b01: dbr <= rx_shift[9:2];
+                                 // VALID  / RELEASE / PARITY      / EXTENDED/  0 0 0 0
+                    2'b00: dbr <= { rx_hold, code_rel, rx_shift[10], code_ext, 4'b0 };
+                    2'b01: dbr <= { rx_shift[9] | code_ext, rx_shift[8:2] };
                 endcase
             end
         end

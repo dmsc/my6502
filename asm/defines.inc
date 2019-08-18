@@ -60,10 +60,10 @@ PS2_CTRL   = $FEA0      ; Control register, write for ACK current data and
                         ; receive next.
 PS2_STAT   = $FEA0      ; Status:
                         ;  bit 7: new data hold in register.
-                        ;  bit 6: Stop bit, 1 == ok.
+                        ;  bit 6: Key state: 1 == released, 0 == pressed
                         ;  bit 5: Parity bit
-                        ;  bit 2: Start bit, 0 == ok.
-                        ;  bit 1: Data complete, 1 == complete.
-PS2_DATA   = $FEA1      ; Received data, valid only if bit 7 of PS2_STAT os 1.
-
+                        ;  bit 4: Extended key (E0 code), also in bit 7 of data.
+PS2_DATA   = $FEA1      ; Received data, valid only if bit 7 of PS2_STAT is 1.
+                        ; The controller interprets E0, E1 and F0 codes, so those
+                        ; are not available in the DATA register.
 
