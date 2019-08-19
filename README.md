@@ -8,7 +8,7 @@ following hardware:
 - A reloadable 16 bit timer module, at address $FE00.
 - An UART at fixed 115200 baud rate, at address $FE20.
 - An RGB led controller (with PWM, ramps and On/Off times), at address $FE40.
-- PS/2 keyboard interface.
+- PS/2 keyboard interface, see [the key code list here](keycodes.md).
 - VGA video controller, registers at address $FE60.
 - 64k bytes of VGA memory, 640x480 video with 4 graphics modes:
   - 16 color, 320x480 (or 320x240, 320x160, etc.) pixels, two pixels per byte.

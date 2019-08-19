@@ -43,10 +43,35 @@ module ps2_debouncer (
     end
 endmodule
 
+// Translation table from keycodes to ASCII like
+module kbd_xlate(
+    output [6:0] ascode,  // ASCII CODE
+    output [3:0] key_sh,  // Shift key
+    input  [7:0] kbcode,  // Keyboard CODE
+    input        shift,
+    input        clk
+    );
+
+    reg [17:0] kb_data[0:255];
+
+    initial
+        $readmemh("rtl/kbtable.hex", kb_data, 0, 255);
+
+    reg [17:0] read;
+
+    always @(posedge clk)
+    begin
+        read <= kb_data[kbcode];
+    end
+
+    assign ascode = shift ? read[6:0] : read[13:7];
+    assign key_sh = read[17:14];
+endmodule
+
 module ps2_kbd (
     output reg [7:0] dbr,   // Data bus READ
     input  [7:0] dbw,   // Data bus WRITE
-    input  addr,        // Address bus - 2 registers
+    input  [1:0] addr,  // Address bus - 2 registers
     input  we,          // write
     input  rst,         // reset
     input  clk,         // Clock
@@ -59,12 +84,17 @@ module ps2_kbd (
     ps2_debouncer db_clock ( .pin(clock_raw | rx_hold), .out(clock_in), .clk(clk) );
     ps2_debouncer db_data  ( .pin(data_raw), .out(data_in), .clk(clk) );
 
+    kbd_xlate xtable( .ascode(rx_ascii), .kbcode(rx_data), .key_sh(rx_skey), .shift(shifts[0]), .clk(clk) );
 
+    wire [6:0] rx_ascii;
+    wire [7:0] rx_data = {rx_shift[9] | code_ext, rx_shift[8:2]};
+    wire [3:0] rx_skey;
     reg rx_hold;
     reg [10:0] rx_shift; // Includes Start, Parity and Stop.
     reg state;           // Clock state
     reg code_rel;        // Processed a release code   (F0)
     reg code_ext;        // Processed an extended code (E0)
+    reg [3:0] shifts;    // State of "shift" keys, Shift, Alt, Control, Windows.
 
     assign clock_out = !rx_hold;
 
@@ -77,6 +107,7 @@ module ps2_kbd (
             state    <= 0;
             code_rel <= 0;
             code_ext <= 0;
+            shifts   <= 0;
         end
         else
         begin
@@ -122,6 +153,14 @@ module ps2_kbd (
                             else
                             begin
                                 rx_hold <= 1;
+                                // Keeps shift state
+                                if( rx_skey )
+                                begin
+                                    if( code_rel )
+                                        shifts <= shifts & ~rx_skey;
+                                    else
+                                        shifts <= shifts | rx_skey;
+                                end
                             end
                         end
                         else
@@ -135,8 +174,9 @@ module ps2_kbd (
             begin
                 case(addr)
                                  // VALID  / RELEASE / PARITY      / EXTENDED/  0 0 0 0
-                    2'b00: dbr <= { rx_hold, code_rel, rx_shift[10], code_ext, 4'b0 };
-                    2'b01: dbr <= { rx_shift[9] | code_ext, rx_shift[8:2] };
+                    2'b00: dbr <= { rx_hold, code_rel, rx_shift[10], code_ext, shifts };
+                    2'b01: dbr <= rx_data;
+                    2'b10: dbr <= { 1'b0, rx_ascii };
                 endcase
             end
         end

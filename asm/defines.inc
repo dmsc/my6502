@@ -56,14 +56,23 @@ SPI_LOAD   = $FFD0      ; Address of SPI load routine. Reads 256 bytes
 SPI_BUFFER = 0          ; Use locations 0,1 as pointer to SPI buffer
 
 ; PS2 registers
-PS2_CTRL   = $FEA0      ; Control register, write for ACK current data and
-                        ; receive next.
-PS2_STAT   = $FEA0      ; Status:
-                        ;  bit 7: new data hold in register.
-                        ;  bit 6: Key state: 1 == released, 0 == pressed
-                        ;  bit 5: Parity bit
-                        ;  bit 4: Extended key (E0 code), also in bit 7 of data.
-PS2_DATA   = $FEA1      ; Received data, valid only if bit 7 of PS2_STAT is 1.
-                        ; The controller interprets E0, E1 and F0 codes, so those
-                        ; are not available in the DATA register.
+PS2_CTRL   = $FEA0  ; Control register, write for ACK current data and
+                    ; receive next.
+PS2_STAT   = $FEA0  ; Status:
+                    ;  bit 7: New data hold in register.
+                    ;  bit 6: Key state: 1 == released, 0 == pressed
+                    ;  bit 5: Parity bit
+                    ;  bit 4: Extended key (E0 code), also in bit 7 of data.
+                    ;  bit 3: State of Windows key, 1 = pressed.
+                    ;  bit 2: State of Alt key, 1 = pressed.
+                    ;  bit 1: State of Control key, 1 = pressed.
+                    ;  bit 0: State of Shift key, 1 = pressed.
+PS2_DATA   = $FEA1  ; Received raw keyboard data, valid only if bit 7 of
+                    ; PS2_STAT is 1. The controller interprets E0, E1 and F0
+                    ; codes before copying to this register.
+PS2_ASCII  = $FEA2  ; Received ASCII keyboard data, valid only if bit 7 of
+                    ; PS2_STAT is 1.
+                    ; This register interprets the state if the Shift key to
+                    ; decode numeric keys, and returns a different ASCII
+                    ; code for each key pressed.
 

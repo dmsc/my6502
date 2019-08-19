@@ -13,6 +13,7 @@ scr_row         .ds     1
 scr_tptr        .ds     2
 scr_cptr        .ds     2
 scr_escape      .ds     1
+kbd_state       .ds     1
 
         org     $200
 
@@ -56,30 +57,21 @@ msg_loop
 end_msg
 
 char_loop:
-        bit     PS2_STAT
-        bpl     char_loop
+        jsr     read_ascii_key
+        beq     char_loop
+        cmp     #$1A
+        beq     ret1
 
-        // Ok, we have a character, return it
-        lda     PS2_DATA
-        sta     PS2_CTRL
-
-        ldx     #$2F
-        bvc     k_press
-        ldx     #$4F
-k_press stx     scr_color
-
-        pha
-
-        jsr     print_hex
-
-        ldx     #$1F
-        stx     scr_color
-        lda     #' '
+        ; Process BACKSPACE and ENTER
+        cmp     #$0D
+        bne     nret
+        lda     #$0A
+nret:   cmp     #$7F
+        bne     nbsp
+        lda     #$08
+nbsp:
         jsr     screen_putchar
 
-        pla
-        cmp     #$76
-        beq     ret1
         jmp     char_loop
 
         ; end....
@@ -132,6 +124,8 @@ no_inc:
 
 
         org     $300
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+; Screen handler
 
 scroll:
         lda     #$d0
@@ -331,6 +325,79 @@ calc_address
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; Keyboard handler
+
+        ; Reads from keyboard controller, returns the Key in A
+        ; and in the V flag the key status, V clear = pressed,
+        ; V set = released.
+        ; This function does not wait for a key, returns 0
+        ; if no key is available.
+read_raw_key:
+        lda     #0
+        ; Check key status, returns with Z flag if no key available
+        bit     PS2_STAT
+        bpl     key_rts
+
+        ; Get and acknowledge scan code
+        lda     PS2_DATA
+        sta     PS2_CTRL
+key_rts:
+        rts
+
+        ; Reads a translated key, returns ASCII code of key
+        ; pressed or 0 if no key is pressed.
+read_ascii_key:
+        lda     #0
+        ; Check key status, returns with Z flag if no key available.
+        bit     PS2_STAT
+        bpl     key_rts
+
+        ; Copy Shift/Control/Alt key state
+        lda     PS2_STAT
+        asl
+        asl     kbd_state       ; Extract Caps-Lock state
+        ror                     ; and sore in new state
+        sta     kbd_state
+
+        ; Get and acknowledge scan code
+        lda     PS2_ASCII
+        sta     PS2_CTRL
+        bvs     read_ascii_key  ; Key release, retry
+        beq     read_ascii_key  ; Unhandled key, retry
+
+        ; Handle special keys - only CAPS LOCK!
+        cmp     #$16
+        beq     do_capslock
+
+        bit     kbd_state
+        bpl     ret_ok
+
+        ; Depending on state of CAPS, change letters from upper/lower
+        cmp     #$41
+        bcc     key_rts
+        cmp     #$5B
+        bcc     is_letter
+        cmp     #$61
+        bcc     key_rts
+        cmp     #$7B
+        bcs     ret_ok
+is_letter:
+        eor     #$20
+ret_ok:
+        cmp     #0
+        rts
+
+do_capslock:
+        // If Shift-Caps, force to uppercase, if not just toggle
+        lda     kbd_state
+        lsr
+        bcc     toggle
+        ora     #$40
+toggle: eor     #$40
+        rol
+        sta     kbd_state
+        lda     #$16
+        rts
+
 
         ; Now the font data in ROM
         org     $2200

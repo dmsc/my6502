@@ -240,7 +240,7 @@ module system(
     ps2_kbd psk1(
         .dbr(psk1_dbr),
         .dbw(dbw),
-        .addr(addr[0]),
+        .addr(addr[1:0]),
         .we(we & psk1_s),
         .rst(rst),
         .clk(cpu_clk),
