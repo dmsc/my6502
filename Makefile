@@ -93,7 +93,7 @@ $(BUILDDIR)/%.vcd: $(BUILDDIR)/%_test
 
 # Assemble sources
 $(BUILDDIR)/%.bin: asm/%.asm | $(BUILDDIR)
-	mads $< -l:$(@:.bin=.lst) -o:$@
+	mads $< -l:$(@:.bin=.lst) -t:$(@:.bin=.lbl) -o:$@
 
 $(BUILDDIR)/%.hex: $(BUILDDIR)/%.bin | $(BUILDDIR)
 	od -An -tx1 -w1 -v $< > $@
