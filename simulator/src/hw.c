@@ -59,15 +59,17 @@ static int sim_timer(sim65 s, struct sim65_reg *regs, unsigned addr, int data)
     }
     else
     {
+        // Adds 1 if active, because HW misses the decrement.
+        count = count + (active?1:0);
+
         switch( reg )
         {
             case 0:
-                // Adds 1 if active, because HW misses the decrement.
-                count = count + (data & 0xFF) + (active?1:0);
+                count = count + (data & 0xFF);
                 break;
             case 1:
                 // Adds 1 if active, because HW misses the decrement.
-                count = count + ((data & 0xFF) << 8) + (active?1:0);
+                count = count + ((data & 0xFF) << 8);
                 break;
             default:
                 shot = !!(data & 0x80);
