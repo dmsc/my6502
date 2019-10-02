@@ -39,8 +39,8 @@ module system(
     wire [7:0] dbr;
     wire [7:0] dbw;
     wire we;
+    wire nmi;
     wire irq = 0;
-    wire nmi = 0;
     wire rdy = 1;
     wire [15:0] monitor;
 
@@ -78,13 +78,14 @@ module system(
     assign ram1_s   = (addr[15:9] !=  7'b1111111)      // $0000 - $CFFF + $F000 - $FDFF
                    && (!vram1_s);                      //
 
-    reg timer1_cs, uart1_cs, spi1_cs, psk1_cs, rom1_cs, ram1_cs, vram1_cs;
+    reg timer1_cs, uart1_cs, vga1_cs, spi1_cs, psk1_cs, rom1_cs, ram1_cs, vram1_cs;
     always @(posedge cpu_clk or posedge rst)
     begin
         if (rst)
         begin
             timer1_cs <= 0;
             uart1_cs  <= 0;
+            vga1_cs   <= 0;
             spi1_cs   <= 0;
             psk1_cs   <= 0;
             rom1_cs   <= 0;
@@ -95,6 +96,7 @@ module system(
         begin
             timer1_cs <= timer1_s;
             uart1_cs  <= uart1_s;
+            vga1_cs   <= vga1_s;
             spi1_cs   <= spi1_s;
             psk1_cs   <= psk1_s;
             rom1_cs   <= rom1_s;
@@ -117,6 +119,7 @@ module system(
 
     wire [7:0] timer1_dbr;
     wire [7:0] uart1_dbr;
+    wire [7:0] vga1_dbr;
     wire [7:0] spi1_dbr;
     wire [7:0] psk1_dbr;
     wire [7:0] rom1_dbr;
@@ -131,6 +134,7 @@ module system(
 
     assign dbr = (timer1_cs ? timer1_dbr : 8'hFF) &
                  (uart1_cs  ? uart1_dbr : 8'hFF) &
+                 (vga1_cs   ? vga1_dbr : 8'hFF) &
                  (spi1_cs   ? spi1_dbr : 8'hFF) &
                  (psk1_cs   ? psk1_dbr : 8'hFF) &
                  (rom1_cs   ? rom1_dbr : 8'hFF) &
@@ -198,9 +202,11 @@ module system(
         .clk(clk25),
         .cpu_clk(cpu_clk),
         .rst(rst),
-        .cpu_addr(addr[2:0]),
+        .cpu_addr(addr[3:0]),
+        .cpu_dbr(vga1_dbr),
         .cpu_dbw(dbw),
         .cpu_we(we & vga1_s),
+        .cpu_nmi(nmi),
         .vga_page(vga_page),
         .hsync(vga_h),
         .vsync(vga_v),

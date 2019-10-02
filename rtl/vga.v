@@ -15,9 +15,11 @@ module vga(
     input  clk,         // Main clock
     input  cpu_clk,     // CPU clock to manage interleave
     input  rst,
-    input [2:0] cpu_addr, // CPU address for write to registers
+    input [3:0] cpu_addr, // CPU address for write to registers
     input [7:0] cpu_dbw,  // CPU data bus write
     input  cpu_we,        // CPU write enable
+    output cpu_nmi,       // NMI output to CPU
+    output reg [7:0] cpu_dbr, // CPU data bus read
     output [2:0] vga_page,// CPU access page to video RAM
     output hsync,
     output vsync,
@@ -52,6 +54,10 @@ module vga(
     reg [15:0] color_base;
     //  06 : font base, hi
     reg [7:0] font_base;
+    //  07 : interrupt control
+    reg vbi_enable, hbi_enable;
+    //     : horizontal interrupt line
+    reg [7:0] hbi_line;
     always @(posedge cpu_clk or posedge rst)
     begin
         if (rst)
@@ -62,42 +68,75 @@ module vga(
             bitmap_base <=    0;
             color_base  <= 4096;
             font_base   <= 32;
+            vbi_enable <= 0;
+            hbi_enable <= 0;
+            hbi_line <= 0;
+            cpu_dbr <= 0;
         end
         else if( cpu_we )
         begin
             case (cpu_addr)
-                3'b000:
+                4'b0000:
                 begin
                     vga_page <= cpu_dbw[2:0];
                 end
-                3'b001:
+                4'b0001:
                 begin
                     hv_mode    <= cpu_dbw[1:0];
                     pix_height <= cpu_dbw[7:3];
                 end
-                3'b010:
+                4'b0010:
                 begin
                     bitmap_base[7:0] <= cpu_dbw;
                 end
-                3'b011:
+                4'b0011:
                 begin
                     bitmap_base[15:8] <= cpu_dbw;
                 end
-                3'b100:
+                4'b0100:
                 begin
                     color_base[7:0] <= cpu_dbw;
                 end
-                3'b101:
+                4'b0101:
                 begin
                     color_base[15:8] <= cpu_dbw;
                 end
-                3'b110:
+                4'b0110:
                 begin
                     font_base <= cpu_dbw;
                 end
+                4'b0111:
+                begin
+                    vbi_enable <= cpu_dbw[1];
+                    hbi_enable <= cpu_dbw[0];
+                end
+                4'b1000:
+                begin
+                    hbi_line <= cpu_dbw;
+                end
+            endcase
+        end
+        else
+        begin
+            case (cpu_addr)
+                4'b0000: cpu_dbr <= { 5'b0, vga_page };
+                4'b0001: cpu_dbr <= { pix_height, 1'b0, hv_mode };
+                4'b0010: cpu_dbr <= bitmap_base[7:0];
+                4'b0011: cpu_dbr <= bitmap_base[15:8];
+                4'b0100: cpu_dbr <= color_base[7:0];
+                4'b0101: cpu_dbr <= color_base[15:8];
+                4'b0110: cpu_dbr <= font_base;
+                4'b0111: cpu_dbr <= { vbi_active, hbi_active, 4'b0, vbi_enable, hbi_enable };
+                4'b1000: cpu_dbr <= hbi_line;
             endcase
         end
     end
+
+    // VGA vertical blank interrupt
+    // Active during first line
+    wire vbi_active = v_end                               & !hsync;
+    wire hbi_active = (vcount[VC_W-1:VC_W-8] == hbi_line) & !hsync;
+    assign cpu_nmi = (vbi_enable & vbi_active) | (hbi_enable & hbi_active);
 
 
     // VGA video timings, from microseconds to clocks:
