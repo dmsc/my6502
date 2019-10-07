@@ -80,16 +80,15 @@ module ps2_kbd (
     );
 
     wire clock_raw, clock_in, data_raw, data_in, clock_out;
-
-    ps2_debouncer db_clock ( .pin(clock_raw | rx_hold), .out(clock_in), .clk(clk) );
-    ps2_debouncer db_data  ( .pin(data_raw), .out(data_in), .clk(clk) );
-
-    kbd_xlate xtable( .ascode(rx_ascii), .kbcode(rx_data), .key_sh(rx_skey), .shift(shifts[0]), .clk(clk) );
-
     wire [6:0] rx_ascii;
     wire [7:0] rx_data = {rx_shift[9] | code_ext, rx_shift[8:2]};
     wire [3:0] rx_skey;
     reg rx_hold;
+
+    ps2_debouncer db_clock ( .pin(clock_raw | rx_hold), .out(clock_in), .clk(clk) );
+    ps2_debouncer db_data  ( .pin(data_raw), .out(data_in), .clk(clk) );
+    kbd_xlate xtable( .ascode(rx_ascii), .kbcode(rx_data), .key_sh(rx_skey), .shift(shifts[0]), .clk(clk) );
+
     reg [10:0] rx_shift; // Includes Start, Parity and Stop.
     reg state;           // Clock state
     reg code_rel;        // Processed a release code   (F0)
@@ -102,7 +101,7 @@ module ps2_kbd (
     begin
         if (rst)
         begin
-            rx_shift <= {1, 10'b0};
+            rx_shift <= {1'b1, 10'b0};
             rx_hold  <= 0;
             state    <= 0;
             code_rel <= 0;
@@ -117,7 +116,7 @@ module ps2_kbd (
                 if( we )
                 begin
                     rx_hold  <= 0;
-                    rx_shift <= {1, 10'b0};
+                    rx_shift <= {1'b1, 10'b0};
                     code_rel <= 0;
                     code_ext <= 0;
                 end
@@ -148,7 +147,7 @@ module ps2_kbd (
                                 else
                                     code_ext <= 1;
                                 rx_hold  <= 0;
-                                rx_shift <= {1, 10'b0};
+                                rx_shift <= {1'b1, 10'b0};
                             end
                             else
                             begin
