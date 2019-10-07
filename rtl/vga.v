@@ -205,8 +205,8 @@ module vga(
 
     // Active area: output image
     wire vactive = ((vcount >= VBP_CLK) && (vcount < VVA_CLK)) ? 1 : 0;
-    wire hactive = ((hcount >= HBP_CLK) && (hcount < HVA_CLK)) ? 1 : 0;
-    wire hactive_prev = ((hcount >= (HBP_CLK-3)) && (hcount < (HVA_CLK-3))) ? 1 : 0;
+    wire hactive_prev = ((hcount >= (HBP_CLK-4)) && (hcount < (HVA_CLK-4))) ? 1 : 0;
+    reg hactive = 0;
 
     // Output data
     reg [7:0] bitmap_data;
@@ -304,9 +304,11 @@ module vga(
             endcase
         end
         // Handle address counters - only during visible part of screen
-        if (hactive_prev)
+        if ((hcount[1:0] == 2'b11) && (cpu_clk == 1))
         begin
-            if ((hcount[1:0] == 2'b11) && (cpu_clk == 1))
+            // Clock hactive here
+            hactive <= hactive_prev;
+            if (hactive_prev)
             begin
                 // Increment pointers:
                 if (hv_mode == HMODE_LORES)
@@ -319,32 +321,32 @@ module vga(
                 else
                     column_addr <= column_addr + 1;
             end
-        end
-        else
-        begin
-            // Reset column address
-            column_addr <= 0;
-            // And once per line, increment pointers
-            if(h_end)
+            else
             begin
-                if (!vactive)
+                // Reset column address
+                column_addr <= 0;
+                // And once per line, increment pointers
+                if(h_end)
                 begin
-                    font_line <= 0;
-                    bitmap_line <= 0;
-                end
-                else if (font_line == pix_height)
-                    // Increase line addresses after "pix_height" lines
-                begin
-                    font_line <= 0;
-                    if (hv_mode == HMODE_HICLR)
-                        bitmap_line <= bitmap_line + (160/8);
-                    else if (hv_mode == HMODE_HIRES || hv_mode == HMODE_TEXT)
-                        bitmap_line <= bitmap_line + (80/8);
+                    if (!vactive)
+                    begin
+                        font_line <= 0;
+                        bitmap_line <= 0;
+                    end
+                    else if (font_line == pix_height)
+                        // Increase line addresses after "pix_height" lines
+                    begin
+                        font_line <= 0;
+                        if (hv_mode == HMODE_HICLR)
+                            bitmap_line <= bitmap_line + (160/8);
+                        else if (hv_mode == HMODE_HIRES || hv_mode == HMODE_TEXT)
+                            bitmap_line <= bitmap_line + (80/8);
+                        else
+                            bitmap_line <= bitmap_line + (40/8);
+                    end
                     else
-                        bitmap_line <= bitmap_line + (40/8);
+                        font_line <= font_line + 1;
                 end
-                else
-                    font_line <= font_line + 1;
             end
         end
 
