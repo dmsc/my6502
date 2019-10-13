@@ -81,7 +81,7 @@ hex_digit:
 
 reset:
         cld
-        sei
+        cli
 
         // Print initial character
         lda     #'#'
@@ -114,12 +114,12 @@ clear_loop
         jsr     read_sector
 
         ; Check if the ROM is valid and jump to the address
-        lda     $2FF
+        lda     SIGNATURE_ADDR
         bne     prompt
-        ldx     $2FE
+        ldx     SIGNATURE_ADDR+1
         inx
         bne     prompt
-        jsr     $200
+        jsr     BOOT_START
 
         // Prompt and process commands
 prompt:
@@ -211,15 +211,12 @@ call_prog:
 
         .echo   "Used: ", * - SPI_LOAD, " bytes, remains: ", $FFFA - *
 
-nmi = $200
-irq = $203
-
         org     $FFFA
-        .word   nmi
+        .word   NMI_VECTOR
 
         org     $FFFC
         .word   reset
 
         org     $FFFE
-        .word   irq
+        .word   IRQ_VECTOR
 

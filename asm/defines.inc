@@ -32,6 +32,12 @@ VGAMODE  = $FE61   ; VGA graphics mode
 VGAGBASE = $FE62   ; VGA graphics bitmap address, 2 bytes.
 VGACBASE = $FE64   ; VGA color memory address, 2 bytes
 VGAFBASE = $FE66   ; VGA font page - 1 byte.
+VGASTAT  = $FE67   ; VGA status register:
+                   ;  Bit 0 : Enable raster line interrupt
+                   ;  Bit 1 : Enable vertical blank interrupt
+                   ;  Bit 6 : raster line interrupt active
+                   ;  But 7 : vertical blank interrupt active
+VGAHLINE = $FE68   ; VGA raster interrupt line, divided by 2.
 
 ; VGA memory window
 VIDEOMEM = $D000   ; Video memory window - 8kB from $D000 to $EFFF.
@@ -75,4 +81,13 @@ PS2_ASCII  = $FEA2  ; Received ASCII keyboard data, valid only if bit 7 of
                     ; This register interprets the state if the Shift key to
                     ; decode numeric keys, and returns a different ASCII
                     ; code for each key pressed.
+
+; Loader addresses
+NMI_VECTOR = $200   ; NMI vector address, place a JMP here
+IRQ_VECTOR = $203   ; IRQ vector address.
+BOOT_START = $206   ; START vector, boot room jumps here.
+
+; Firmware signature - bytes $2FE and $2FF must be $00 and $FF
+SIGNATURE_ADDR = $2FE
+SIGNATURE_WORD = $FF00
 

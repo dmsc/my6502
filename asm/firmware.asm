@@ -14,10 +14,16 @@ scr_tptr        .ds     2
 scr_cptr        .ds     2
 scr_escape      .ds     1
 kbd_state       .ds     1
+frame_count     .ds     1
 
-        org     $200
+        org     NMI_VECTOR
+        jmp     nmi_handler
 
-        ; Main rom jumps here on load:
+        org     IRQ_VECTOR
+        jmp     exit_rti
+
+        ; Main ROM jumps here on load:
+        org     BOOT_START
 start:
         ; Load rest of boot program from $201 to $21f in memory $300 to $21FF
         lda     #$03
@@ -117,11 +123,39 @@ no_inc:
         bne     next_sector
         rts
 
+        ; Handle NMI interrupts
+nmi_handler:
+        bit     VGASTAT
+        bmi     vbi_interrupt
+        bvs     raster_interrupt
+exit_rti:
+        rti
+
+vbi_interrupt:
+        pha
+        ; Load text mode on top
+        lda     #$78
+        sta     VGAMODE
+        ; Increment frame counter
+        inc     frame_count
+        lda     frame_count
+        sta     VIDEOMEM + 79
+        pla
+        rti
+
+raster_interrupt:
+        pha
+        ; Set high-color mode
+        lda     #$0A
+        sta     VGAMODE
+        pla
+        rti
+
+        .echo   "Page #2: used: ", * - $200, " bytes, remains: ", SIGNATURE_ADDR - *
 
         ; boot sector signature:
-        org     $2FE
-        .byte   $FF, $00
-
+        org     SIGNATURE_ADDR
+        .word   SIGNATURE_WORD
 
         org     $300
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
