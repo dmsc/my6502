@@ -333,7 +333,7 @@ module vga(
                         font_line <= 0;
                         bitmap_line <= 0;
                     end
-                    else if (font_line == pix_height)
+                    else if (font_line >= pix_height)
                         // Increase line addresses after "pix_height" lines
                     begin
                         font_line <= 0;
