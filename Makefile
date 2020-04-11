@@ -38,6 +38,20 @@ HEXFILE=$(BUILDDIR)/minirom.hex
 
 all: $(TARGET) $(FIRMWARE)
 
+.PHONY: prog
+prog: prog-fpga prog-fw
+
+
+.PHONY: prog-fpga
+prog-fpga: $(BUILDDIR)/$(TARGET).bin
+	# Only program if not already ok
+	iceprog -c "$<" || iceprog "$<"
+
+.PHONY: prog-fw
+prog-fw: $(FIRMWARE)
+	iceprog -o 128k -c "$<" || iceprog -o 128k "$<"
+
+
 .PHONY: test
 test: $(TESTS:%=$(BUILDDIR)/%.vcd)
 
